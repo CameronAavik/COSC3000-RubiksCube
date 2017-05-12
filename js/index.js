@@ -1,16 +1,16 @@
 "use strict";
-class Program {
+class WebGLDemo {
     constructor(canvasId, vertexShaderPath, fragmentShaderPath) {
         this.canvasId = canvasId;
         this.vertexShaderPath = vertexShaderPath;
         this.fragmentShaderPath = fragmentShaderPath;
     }
     load() {
-        const glContext = this.loadGLContext();
-        const vertexShaderPath = this.loadFile(this.vertexShaderPath);
-        const fragmentShaderPath = this.loadFile(this.fragmentShaderPath);
-        const shaders = Promise.all([glContext, vertexShaderPath, fragmentShaderPath]).then(s => this.loadShaders(s[0], s[1], s[2]));
-        const program = Promise.all([glContext, shaders]).then(s => this.createProgram(s[0], s[1].vertexShader, s[1].fragmentShader));
+        const glContext = WebGLDemo.loadGLContext(this.canvasId);
+        const vertexShaderPath = WebGLDemo.loadFile(this.vertexShaderPath);
+        const fragmentShaderPath = WebGLDemo.loadFile(this.fragmentShaderPath);
+        const shaders = Promise.all([glContext, vertexShaderPath, fragmentShaderPath]).then(s => WebGLDemo.loadShaders(s[0], s[1], s[2]));
+        const program = Promise.all([glContext, shaders]).then(s => WebGLDemo.createProgram(s[0], s[1].vertexShader, s[1].fragmentShader));
         return Promise.all([glContext, program]).then(s => ({ gl: s[0], program: s[1] }));
     }
     drawTriangle(glVars) {
@@ -46,7 +46,19 @@ class Program {
         const count = 3;
         gl.drawArrays(primitiveType, offset, count);
     }
-    loadFile(filePath) {
+    static loadGLContext(canvasId) {
+        return new Promise((resolve, reject) => {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext("webgl");
+            if (ctx !== null) {
+                resolve(ctx);
+            }
+            else {
+                reject(new Error("WebGL not available"));
+            }
+        });
+    }
+    static loadFile(filePath) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.onreadystatechange = () => {
@@ -63,25 +75,13 @@ class Program {
             xhr.send();
         });
     }
-    loadGLContext() {
-        return new Promise((resolve, reject) => {
-            const canvas = document.getElementById(this.canvasId);
-            const ctx = canvas.getContext("webgl");
-            if (ctx !== null) {
-                resolve(ctx);
-            }
-            else {
-                reject(new Error("WebGL not available"));
-            }
-        });
-    }
-    loadShaders(gl, vertexShader, fragmentShader) {
+    static loadShaders(gl, vertexShader, fragmentShader) {
         return Promise.all([
-            this.createShader(gl, vertexShader, gl.VERTEX_SHADER),
-            this.createShader(gl, fragmentShader, gl.FRAGMENT_SHADER)
+            WebGLDemo.createShader(gl, vertexShader, gl.VERTEX_SHADER),
+            WebGLDemo.createShader(gl, fragmentShader, gl.FRAGMENT_SHADER)
         ]).then(shaders => ({ vertexShader: shaders[0], fragmentShader: shaders[1] }));
     }
-    createShader(gl, source, type) {
+    static createShader(gl, source, type) {
         return new Promise((resolve, reject) => {
             const shader = gl.createShader(type);
             if (shader === null) {
@@ -101,7 +101,7 @@ class Program {
             }
         });
     }
-    createProgram(gl, vertexShader, fragmentShader) {
+    static createProgram(gl, vertexShader, fragmentShader) {
         return new Promise((resolve, reject) => {
             const program = gl.createProgram();
             if (program === null) {
@@ -123,6 +123,6 @@ class Program {
         });
     }
 }
-const program = new Program("glCanvas", "shaders/vertex-shader.glsl", "shaders/fragment-shader.glsl");
-program.load().then(program.drawTriangle).catch(console.log);
+const demo = new WebGLDemo("glCanvas", "shaders/vertex-shader.glsl", "shaders/fragment-shader.glsl");
+demo.load().then(demo.drawTriangle).catch(console.log);
 //# sourceMappingURL=index.js.map

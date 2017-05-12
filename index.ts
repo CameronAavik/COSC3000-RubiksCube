@@ -1,17 +1,18 @@
-class Program {
+class WebGLDemo {
 
     constructor(private canvasId: string, private vertexShaderPath: string, private fragmentShaderPath: string) { }
+
     public load(): Promise<{ gl: WebGLRenderingContext, program: WebGLProgram }> {
-        const glContext = this.loadGLContext();
-        const vertexShaderPath = this.loadFile(this.vertexShaderPath);
-        const fragmentShaderPath = this.loadFile(this.fragmentShaderPath);
-        const shaders = Promise.all([glContext, vertexShaderPath, fragmentShaderPath]).then(s => this.loadShaders(s[0], s[1], s[2]));
-        const program = Promise.all([glContext, shaders]).then(s => this.createProgram(s[0], s[1].vertexShader, s[1].fragmentShader));
-        return Promise.all([glContext, program]).then(s => ({gl: s[0], program: s[1]}));
+        const glContext = WebGLDemo.loadGLContext(this.canvasId);
+        const vertexShaderPath = WebGLDemo.loadFile(this.vertexShaderPath);
+        const fragmentShaderPath = WebGLDemo.loadFile(this.fragmentShaderPath);
+        const shaders = Promise.all([glContext, vertexShaderPath, fragmentShaderPath]).then(s => WebGLDemo.loadShaders(s[0], s[1], s[2]));
+        const program = Promise.all([glContext, shaders]).then(s => WebGLDemo.createProgram(s[0], s[1].vertexShader, s[1].fragmentShader));
+        return Promise.all([glContext, program]).then(s => ({ gl: s[0], program: s[1] }));
     }
 
-    public drawTriangle(glVars: {gl: WebGLRenderingContext, program: WebGLProgram}) {
-        const {gl, program} = glVars;
+    public drawTriangle(glVars: { gl: WebGLRenderingContext, program: WebGLProgram }) {
+        const { gl, program } = glVars;
         const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -31,7 +32,7 @@ class Program {
         gl.enableVertexAttribArray(positionAttributeLocation);
         // Bind the position buffer.
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        
+
         // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
         const size = 2;          // 2 components per iteration
         const type = gl.FLOAT;   // the data is 32bit floats
@@ -46,7 +47,19 @@ class Program {
         gl.drawArrays(primitiveType, offset, count);
     }
 
-    private loadFile(filePath: string): Promise<string> {
+    private static loadGLContext(canvasId: string): Promise<WebGLRenderingContext> {
+        return new Promise<WebGLRenderingContext>((resolve, reject) => {
+            const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+            const ctx = canvas.getContext("webgl");
+            if (ctx !== null) {
+                resolve(ctx);
+            } else {
+                reject(new Error("WebGL not available"));
+            }
+        });
+    }
+
+    private static loadFile(filePath: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.onreadystatechange = () => {
@@ -63,26 +76,16 @@ class Program {
         });
     }
 
-    private loadGLContext(): Promise<WebGLRenderingContext> {
-        return new Promise<WebGLRenderingContext>((resolve, reject) => {
-            const canvas = document.getElementById(this.canvasId) as HTMLCanvasElement;
-            const ctx = canvas.getContext("webgl");
-            if (ctx !== null) {
-                resolve(ctx);
-            } else {
-                reject(new Error("WebGL not available"));
-            }
-        });
-    }
 
-    private loadShaders(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string): Promise<{ vertexShader: WebGLShader, fragmentShader: WebGLShader }> {
+
+    private static loadShaders(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string): Promise<{ vertexShader: WebGLShader, fragmentShader: WebGLShader }> {
         return Promise.all([
-            this.createShader(gl, vertexShader, gl.VERTEX_SHADER),
-            this.createShader(gl, fragmentShader, gl.FRAGMENT_SHADER)
+            WebGLDemo.createShader(gl, vertexShader, gl.VERTEX_SHADER),
+            WebGLDemo.createShader(gl, fragmentShader, gl.FRAGMENT_SHADER)
         ]).then(shaders => ({ vertexShader: shaders[0], fragmentShader: shaders[1] }));
     }
 
-    private createShader(gl: WebGLRenderingContext, source: string, type: number): Promise<WebGLShader> {
+    private static createShader(gl: WebGLRenderingContext, source: string, type: number): Promise<WebGLShader> {
         return new Promise<WebGLShader>((resolve, reject) => {
             const shader = gl.createShader(type);
             if (shader === null) {
@@ -102,7 +105,7 @@ class Program {
         });
     }
 
-    private createProgram(gl: WebGLRenderingContext, vertexShader: WebGLShader, fragmentShader: WebGLShader): Promise<WebGLProgram> {
+    private static createProgram(gl: WebGLRenderingContext, vertexShader: WebGLShader, fragmentShader: WebGLShader): Promise<WebGLProgram> {
         return new Promise<WebGLProgram>((resolve, reject) => {
             const program = gl.createProgram();
             if (program === null) {
@@ -124,5 +127,5 @@ class Program {
     }
 }
 
-const program = new Program("glCanvas", "shaders/vertex-shader.glsl", "shaders/fragment-shader.glsl");
-program.load().then(program.drawTriangle).catch(console.log);
+const demo = new WebGLDemo("glCanvas", "shaders/vertex-shader.glsl", "shaders/fragment-shader.glsl");
+demo.load().then(demo.drawTriangle).catch(console.log);
