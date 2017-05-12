@@ -11,7 +11,7 @@ class Program {
     }
 
     public drawTriangle(glVars: {gl: WebGLRenderingContext, program: WebGLProgram}) {
-        var {gl, program} = glVars;
+        const {gl, program} = glVars;
         const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -37,11 +37,11 @@ class Program {
         const type = gl.FLOAT;   // the data is 32bit floats
         const normalize = false; // don't normalize the data
         const stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-        let offset = 0;          // start at the beginning of the buffer
-        gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
+        const bufferOffset = 0;  // start at the beginning of the buffer
+        gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, bufferOffset);
 
         const primitiveType = gl.TRIANGLES;
-        offset = 0;
+        const offset = 0;
         const count = 3;
         gl.drawArrays(primitiveType, offset, count);
     }
