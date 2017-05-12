@@ -7,6 +7,7 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "noImplicitReturns": true,
-        "watch": true
+        "watch": true,
+        "outDir": "js"
     }
 }

@@ -1,2 +1,2 @@
-*.js
+# Ignore the js mapping files, only used in development
 *.js.map
