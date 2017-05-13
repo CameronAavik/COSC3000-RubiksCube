@@ -6,9 +6,9 @@ class WebGLDemo {
         const glContext = WebGLDemo.loadGLContext(this.canvasId);
         const vertexShaderPath = WebGLDemo.loadFile(this.vertexShaderPath);
         const fragmentShaderPath = WebGLDemo.loadFile(this.fragmentShaderPath);
-        const shaders = Promise.all([glContext, vertexShaderPath, fragmentShaderPath]).then(s => WebGLDemo.loadShaders(s[0], s[1], s[2]));
-        const program = Promise.all([glContext, shaders]).then(s => WebGLDemo.createProgram(s[0], s[1].vertexShader, s[1].fragmentShader));
-        return Promise.all([glContext, program]).then(s => ({ gl: s[0], program: s[1] }));
+        const shaders = Promise.all([glContext, vertexShaderPath, fragmentShaderPath]).then(([gl, vert, frag]) => WebGLDemo.loadShaders(gl, vert, frag));
+        const program = Promise.all([glContext, shaders]).then(([gl, shaders]) => WebGLDemo.createProgram(gl, shaders.vertexShader, shaders.fragmentShader));
+        return Promise.all([glContext, program]).then(([gl, program]) => ({ gl, program }));
     }
 
     public drawTriangle(glVars: { gl: WebGLRenderingContext, program: WebGLProgram }) {
@@ -24,9 +24,14 @@ class WebGLDemo {
         ];
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-        // Clear the canvas
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        // Set clear color to black, fully opaque
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        // Enable depth testing
+        gl.enable(gl.DEPTH_TEST);
+        // Near things obscure far things
+        gl.depthFunc(gl.LEQUAL);
+        // Clear the color as well as the depth buffer.
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         // Tell it to use our program (pair of shaders)
         gl.useProgram(program);
         gl.enableVertexAttribArray(positionAttributeLocation);
@@ -76,13 +81,11 @@ class WebGLDemo {
         });
     }
 
-
-
     private static loadShaders(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string): Promise<{ vertexShader: WebGLShader, fragmentShader: WebGLShader }> {
         return Promise.all([
             WebGLDemo.createShader(gl, vertexShader, gl.VERTEX_SHADER),
             WebGLDemo.createShader(gl, fragmentShader, gl.FRAGMENT_SHADER)
-        ]).then(shaders => ({ vertexShader: shaders[0], fragmentShader: shaders[1] }));
+        ]).then(([vertexShader, fragmentShader]) => ({ vertexShader, fragmentShader}));
     }
 
     private static createShader(gl: WebGLRenderingContext, source: string, type: number): Promise<WebGLShader> {
