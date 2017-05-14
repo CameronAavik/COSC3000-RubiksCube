@@ -253,4 +253,5 @@ class RubiksCube {
     }
 
     // TODO: define generic rotation method which will take in an axis, a list of layers and a rotation angle
+    // TODO: translation and rotation matrix for the center of the cube relative to the origin of the 3D space
 }
