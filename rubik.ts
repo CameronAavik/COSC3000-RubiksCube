@@ -1,7 +1,11 @@
+// TODO: replace with proper Vector class with multiplication and all that jazz
+type Vec3<T> = [T, T, T] & { 3?: void };
+type Vec4<T> = [T, T, T, T] & { 4?: void };
+
 // string literals representing each of the axes in WebGL
 // see https://www.tutorialspoint.com/webgl/images/webgl_coordinate_system.jpg for more info
 type Axis = 'X' | 'Y' | 'Z';
-// number literals representing the 
+// number literals representing the direction along the axis
 type Direction = 1 | -1;
 
 // Object representing the combination of an axis and a direction
@@ -13,9 +17,10 @@ class AxisDirection {
     public static readonly U = new AxisDirection('Y', 1);
     public static readonly B = new AxisDirection('Z', -1);
     public static readonly F = new AxisDirection('Z', 1);
+
     constructor(public axis: Axis, public dir: Direction) { }
 
-    // returns if the given x, y, z cubie is on the face belonging to the current axis direction
+    // returns if the given x, y, z position is on the face belonging to the current axis direction
     public isOnFace(pos: Vec3<number>, size: number): boolean {
         switch (this.axis) {
             case 'X': return (pos[0] == 0 && this.dir == -1) || (pos[0] == size - 1 && this.dir == 1);
@@ -25,9 +30,6 @@ class AxisDirection {
     }
 }
 
-// TODO: replace with proper Vector class with multiplication and all that jazz
-type Vec3<T> = [T, T, T] & { 3?: void };
-type Vec4<T> = [T, T, T, T] & { 4?: void };
 type Colour = 'White' | 'Blue' | 'Yellow' | 'Green' | 'Red' | 'Orange' | 'None';
 
 // maps colours to the colour codes in RGBA
@@ -55,9 +57,11 @@ const startingFaceColours = new Map<AxisDirection, Colour>([
 // track of it's spatial transformations with respect to the center of the entire cube. It is also responsible for 
 // informing about the geometry of the cubie itself to be used when rendering.
 class Cubie {
+    // TODO: translation and rotation matrix relative to center of cube
     public pos: Vec3<number>
     private size: number;
     private axisDirMap: Map<AxisDirection, Colour>;
+
     constructor(pos: Vec3<number>, size: number) {
         this.pos = pos;
         this.size = size;
@@ -102,7 +106,7 @@ class Cubie {
         const map = new Map<AxisDirection, Colour>();
         startingFaceColours.forEach((value, key) => {
             map.set(key, key.isOnFace(pos, size) ? value : 'None');
-        })
+        });
         return map;
     }
 }
@@ -112,6 +116,7 @@ class Layer {
     public readonly axis: Axis;
     // Represents which layer on the axis of rotation this is
     public readonly layerNumber: number;
+
     constructor(axis: Axis, layerNumber: number) {
         this.axis = axis;
         this.layerNumber = layerNumber;
@@ -121,22 +126,22 @@ class Layer {
         for (let rot = 0; rot < rotations; rot++) {
             // 1. Perform an in-place matrix transposition of the cubes in the layer
             // Using algo from https://en.wikipedia.org/wiki/In-place_matrix_transposition#Square_matrices
-            for (let n = 0; n < cube.size - 1; n++) {
-                for (let m = n + 1; m < cube.size; m++) {
-                    Layer.swapCubies(cube, this.getPosForElem(n, m), this.getPosForElem(m, n));
+            for (let i = 0; i < cube.size - 1; i++) {
+                for (let j = i + 1; j < cube.size; j++) {
+                    Layer.swapCubies(cube, this.getPosForElem(i, j), this.getPosForElem(j, i));
                 }
             }
             // 2. Reverse the rows
             const halfCount = Math.floor(cube.size / 2);
-            for (let n = 0; n < cube.size; n++) {
-                for (let m = 0; m < halfCount; m++) {
-                    Layer.swapCubies(cube, this.getPosForElem(n, m), this.getPosForElem(n, (cube.size - 1) - m));
+            for (let i = 0; i < cube.size; i++) {
+                for (let j = 0; j < halfCount; j++) {
+                    Layer.swapCubies(cube, this.getPosForElem(i, j), this.getPosForElem(i, (cube.size - 1) - j));
                 }
             }
             // 3. Call the rotate method on all the cubies in the layer
-            for (let n = 0; n < cube.size; n++) {
-                for (let m = 0; m < cube.size; m++) {
-                    const pos = this.getPosForElem(n, m);
+            for (let i = 0; i < cube.size; i++) {
+                for (let j = 0; j < cube.size; j++) {
+                    const pos = this.getPosForElem(i, j);
                     cube.getCubie(pos).rotateToNewPos(this.axis, pos);
                 }
             }
@@ -150,27 +155,26 @@ class Layer {
     }
 
     // TODO: validate that this is correct
-    protected getPosForElem(n: number, m: number): Vec3<number> {
+    protected getPosForElem(i: number, j: number): Vec3<number> {
         switch (this.axis) {
-            case 'X': return [this.layerNumber, n, m];
-            case 'Y': return [n, this.layerNumber, m];
-            case 'Z': return [n, m, this.layerNumber];
+            case 'X': return [this.layerNumber, i, j];
+            case 'Y': return [i, this.layerNumber, j];
+            case 'Z': return [i, j, this.layerNumber];
         }
     }
 }
 
 class Face extends Layer {
-    public axisDir: AxisDirection;
-    constructor(axis: Axis, layerNumber: number, axisDir: AxisDirection) {
-        super(axis, layerNumber)
-        this.axisDir = axisDir;
+    constructor(axis: Axis, layerNumber: number, public axisDir: AxisDirection) {
+        super(axis, layerNumber);
     }
+
     public getColours(cube: RubiksCube): Colour[][] {
         const colours: Colour[][] = [];
-        for (let n = 0; n < cube.size; n++) {
-            colours[n] = [];
-            for (let m = 0; m < cube.size; m++) {
-                colours[n][m] = cube.getCubie(this.getPosForElem(n, m)).getColour(this.axisDir);
+        for (let i = 0; i < cube.size; i++) {
+            colours[i] = [];
+            for (let j = 0; j < cube.size; j++) {
+                colours[i][j] = cube.getCubie(this.getPosForElem(i, j)).getColour(this.axisDir);
             }
         }
         return colours;
@@ -178,12 +182,11 @@ class Face extends Layer {
 }
 
 type RubiksCubeLayers = { x: Layer[], y: Layer[], z: Layer[] }
-
 type RubiksCubeFaces = { f: Face, b: Face, l: Face, r: Face, u: Face, d: Face };
 
 class RubiksCube {
     // We maintain a list of all the cubies in the cube
-    // These cubies are sorted such that the 0th cube is LDB and last cube is RUF
+    // These cubies are sorted such that the 0th cube is LDB and last cube is RUF and that it first increases in the x direction, then y, then z
     public cubies: Cubie[];
     // We maintain every layer that can be rotated
     public layers: RubiksCubeLayers;
@@ -203,9 +206,8 @@ class RubiksCube {
     public getAllFaces = () =>
         [this.faces.f, this.faces.u, this.faces.l, this.faces.r, this.faces.d, this.faces.b];
 
-    public getCubie(pos: Vec3<number>): Cubie {
-        return this.cubies[pos[0] + this.size * pos[1] + this.size ** 2 * pos[2]];
-    }
+    public getCubie = (pos: Vec3<number>) =>
+        this.cubies[pos[0] + this.size * pos[1] + (this.size ** 2) * pos[2]];
 
     public setCubie(pos: Vec3<number>, cubie: Cubie): void {
         this.cubies[pos[0] + this.size * pos[1] + this.size ** 2 * pos[2]] = cubie;
@@ -213,9 +215,9 @@ class RubiksCube {
 
     private static genCubies(size: number): Cubie[] {
         const cubies: Cubie[] = [];
-        for (let x = 0; x < size; x++) {
+        for (let z = 0; z < size; z++) {
             for (let y = 0; y < size; y++) {
-                for (let z = 0; z < size; z++) {
+                for (let x = 0; x < size; x++) {
                     cubies.push(new Cubie([x, y, z], size));
                 }
             }
@@ -249,4 +251,6 @@ class RubiksCube {
             }
         };
     }
+
+    // TODO: define generic rotation method which will take in an axis, a list of layers and a rotation angle
 }

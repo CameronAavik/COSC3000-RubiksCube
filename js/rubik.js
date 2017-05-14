@@ -5,7 +5,7 @@ class AxisDirection {
         this.axis = axis;
         this.dir = dir;
     }
-    // returns if the given x, y, z cubie is on the face belonging to the current axis direction
+    // returns if the given x, y, z position is on the face belonging to the current axis direction
     isOnFace(pos, size) {
         switch (this.axis) {
             case 'X': return (pos[0] == 0 && this.dir == -1) || (pos[0] == size - 1 && this.dir == 1);
@@ -97,22 +97,22 @@ class Layer {
         for (let rot = 0; rot < rotations; rot++) {
             // 1. Perform an in-place matrix transposition of the cubes in the layer
             // Using algo from https://en.wikipedia.org/wiki/In-place_matrix_transposition#Square_matrices
-            for (let n = 0; n < cube.size - 1; n++) {
-                for (let m = n + 1; m < cube.size; m++) {
-                    Layer.swapCubies(cube, this.getPosForElem(n, m), this.getPosForElem(m, n));
+            for (let i = 0; i < cube.size - 1; i++) {
+                for (let j = i + 1; j < cube.size; j++) {
+                    Layer.swapCubies(cube, this.getPosForElem(i, j), this.getPosForElem(j, i));
                 }
             }
             // 2. Reverse the rows
             const halfCount = Math.floor(cube.size / 2);
-            for (let n = 0; n < cube.size; n++) {
-                for (let m = 0; m < halfCount; m++) {
-                    Layer.swapCubies(cube, this.getPosForElem(n, m), this.getPosForElem(n, (cube.size - 1) - m));
+            for (let i = 0; i < cube.size; i++) {
+                for (let j = 0; j < halfCount; j++) {
+                    Layer.swapCubies(cube, this.getPosForElem(i, j), this.getPosForElem(i, (cube.size - 1) - j));
                 }
             }
             // 3. Call the rotate method on all the cubies in the layer
-            for (let n = 0; n < cube.size; n++) {
-                for (let m = 0; m < cube.size; m++) {
-                    const pos = this.getPosForElem(n, m);
+            for (let i = 0; i < cube.size; i++) {
+                for (let j = 0; j < cube.size; j++) {
+                    const pos = this.getPosForElem(i, j);
                     cube.getCubie(pos).rotateToNewPos(this.axis, pos);
                 }
             }
@@ -124,11 +124,11 @@ class Layer {
         cube.setCubie(pos1, cubie);
     }
     // TODO: validate that this is correct
-    getPosForElem(n, m) {
+    getPosForElem(i, j) {
         switch (this.axis) {
-            case 'X': return [this.layerNumber, n, m];
-            case 'Y': return [n, this.layerNumber, m];
-            case 'Z': return [n, m, this.layerNumber];
+            case 'X': return [this.layerNumber, i, j];
+            case 'Y': return [i, this.layerNumber, j];
+            case 'Z': return [i, j, this.layerNumber];
         }
     }
 }
@@ -139,10 +139,10 @@ class Face extends Layer {
     }
     getColours(cube) {
         const colours = [];
-        for (let n = 0; n < cube.size; n++) {
-            colours[n] = [];
-            for (let m = 0; m < cube.size; m++) {
-                colours[n][m] = cube.getCubie(this.getPosForElem(n, m)).getColour(this.axisDir);
+        for (let i = 0; i < cube.size; i++) {
+            colours[i] = [];
+            for (let j = 0; j < cube.size; j++) {
+                colours[i][j] = cube.getCubie(this.getPosForElem(i, j)).getColour(this.axisDir);
             }
         }
         return colours;
@@ -151,23 +151,21 @@ class Face extends Layer {
 class RubiksCube {
     constructor(size) {
         this.getAllFaces = () => [this.faces.f, this.faces.u, this.faces.l, this.faces.r, this.faces.d, this.faces.b];
+        this.getCubie = (pos) => this.cubies[pos[0] + this.size * pos[1] + (Math.pow(this.size, 2)) * pos[2]];
         this.size = size;
         this.cubies = RubiksCube.genCubies(size);
         const layers = RubiksCube.genLayers(size);
         this.layers = layers.layers;
         this.faces = layers.faces;
     }
-    getCubie(pos) {
-        return this.cubies[pos[0] + this.size * pos[1] + Math.pow(this.size, 2) * pos[2]];
-    }
     setCubie(pos, cubie) {
         this.cubies[pos[0] + this.size * pos[1] + Math.pow(this.size, 2) * pos[2]] = cubie;
     }
     static genCubies(size) {
         const cubies = [];
-        for (let x = 0; x < size; x++) {
+        for (let z = 0; z < size; z++) {
             for (let y = 0; y < size; y++) {
-                for (let z = 0; z < size; z++) {
+                for (let x = 0; x < size; x++) {
                     cubies.push(new Cubie([x, y, z], size));
                 }
             }
