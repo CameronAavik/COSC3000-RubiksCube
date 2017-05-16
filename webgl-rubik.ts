@@ -12,6 +12,21 @@ namespace WebGLRubik {
             this.cols = this.rows === 0 ? 0 : elements[0].length;
         }
 
+        public add(other: Matrix): Matrix {
+            if (this.cols !== other.cols || this.rows !== other.rows) {
+                throw Error(`Couldn't perform the matrix addition as the dimensions did not match`);
+            }
+            const newMatrixElements: number[][] = [];
+            for (let i = 0; i < this.rows; i++) {
+                const newRowElems: number[] = [];
+                for (let j = 0; j < other.cols; j++) {
+                    newRowElems.push(this.elements[i][j] + other.elements[i][j]);
+                }
+                newMatrixElements.push(newRowElems);
+            }
+            return new Matrix(newMatrixElements);
+        }
+
         public mul(other: Matrix): Matrix {
             if (this.cols !== other.rows) {
                 throw Error(`Couldn't perform the matrix multiplication as the dimensions did not match`);
@@ -34,28 +49,41 @@ namespace WebGLRubik {
 
     class Vector extends Matrix {
         public readonly dimensions: number;
-        public readonly isColumnVector: boolean;
         public readonly length: number;
 
-        constructor(elements: number[], isColumnVector: boolean) {
+        constructor(elements: number[]) {
             const matrixElements: number[][] = [];
-            if (isColumnVector) {
-                elements.forEach(elem => matrixElements.push([elem]));
-            } else {
-                matrixElements.push(elements);
-            }
+            elements.forEach(elem => matrixElements.push([elem]));
             super(matrixElements);
             this.dimensions = elements.length;
-            this.isColumnVector = isColumnVector;
             this.length = Math.sqrt(this.dot(this));
         }
 
         public getElem(index: number) {
-            if (this.isColumnVector) {
-                return this.elements[index][0];
-            } else {
-                return this.elements[0][index];
+            return this.elements[index][0];
+        }
+
+        public static Zero(dims: number): Vector {
+            return new Vector(new Array(dims).fill(0));
+        }
+
+        public add(other: Vector): Vector {
+            if (this.dimensions !== other.dimensions) {
+                throw Error(`Couldn't perform the dot product as the dimensions were not the same`);
             }
+            let newElems: number[] = [];
+            for (let i = 0; i < this.dimensions; i++) {
+                newElems.push(this.getElem(i) + other.getElem(i));
+            }
+            return new Vector(newElems);
+        }
+
+        public scale(k: number): Vector {
+            let newElems: number[] = [];
+            for (let i = 0; i < this.dimensions; i++) {
+                newElems.push(this.getElem(i) * k);
+            }
+            return new Vector(newElems);
         }
 
         public dot(other: Vector): number {
@@ -67,7 +95,7 @@ namespace WebGLRubik {
                 total += this.getElem(i) * other.getElem(i);
             }
             return total;
-        }    
+        }
     }
 
     class WebGLCubie extends Rubik.Cubie {

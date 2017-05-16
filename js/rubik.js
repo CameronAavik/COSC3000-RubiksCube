@@ -24,109 +24,114 @@ var Rubik;
      * A cubie is an individual cube and is a component of a Rubik's Cube. The cubie class is responsible for keeping
      * track of the colours of each of it's 6 sides in the direction of each face.
      */
-    class Cubie {
-        constructor(pos, size) {
+    var Cubie = (function () {
+        function Cubie(pos, size) {
             this.pos = pos;
             this.size = size;
             this.faceMap = Cubie.getStartingColourMap(pos, size);
         }
-        getColour(face) {
-            const colour = this.faceMap.get(face);
+        Cubie.prototype.getColour = function (face) {
+            var colour = this.faceMap.get(face);
             if (colour === undefined) {
                 throw Error("There is no colour for that Face.");
             }
             return colour;
-        }
-        rotateToNewPos(axis, newPos) {
+        };
+        Cubie.prototype.rotateToNewPos = function (axis, newPos) {
             this.pos = newPos;
-            const start = 2 * axis + 2;
-            const end = start + 3;
-            let prev = this.getColour(Rubik.faces[end % 6]);
-            for (let i = start; i < end; i++) {
-                const current = this.getColour(Rubik.faces[i % 6]);
+            var start = 2 * axis + 2;
+            var end = start + 3;
+            var prev = this.getColour(Rubik.faces[end % 6]);
+            for (var i = start; i < end; i++) {
+                var current = this.getColour(Rubik.faces[i % 6]);
                 this.faceMap.set(Rubik.faces[i % 6], prev);
                 prev = current;
             }
-        }
-        static getStartingColourMap(pos, size) {
-            const map = new Map();
-            Rubik.faces.forEach(face => {
+        };
+        Cubie.getStartingColourMap = function (pos, size) {
+            var map = new Map();
+            Rubik.faces.forEach(function (face) {
                 map.set(face, Cubie.isOnFace(face, pos, size) ? face.startingColour : Rubik.colours.none);
             });
             return map;
-        }
-    }
-    Cubie.isOnFace = (face, pos, size) => (pos[face.axis] === 0 && face.dir === Rubik.dirs.neg) || (pos[face.axis] === size - 1 && face.dir === Rubik.dirs.pos);
+        };
+        return Cubie;
+    }());
+    Cubie.isOnFace = function (face, pos, size) {
+        return (pos[face.axis] === 0 && face.dir === Rubik.dirs.neg) || (pos[face.axis] === size - 1 && face.dir === Rubik.dirs.pos);
+    };
     Rubik.Cubie = Cubie;
-    class Cube {
-        constructor(size) {
+    var Cube = (function () {
+        function Cube(size) {
+            var _this = this;
             this.size = size;
-            this.getCubie = (pos) => this.cubies[pos[0] + this.size * pos[1] + (Math.pow(this.size, 2)) * pos[2]];
+            this.getCubie = function (pos) { return _this.cubies[pos[0] + _this.size * pos[1] + (Math.pow(_this.size, 2)) * pos[2]]; };
             this.cubies = Cube.genCubies(size);
         }
-        rotate(rotations, layer) {
-            for (let rot = 0; rot < rotations; rot++) {
+        Cube.prototype.rotate = function (rotations, layer) {
+            for (var rot = 0; rot < rotations; rot++) {
                 // 1. Perform an in-place matrix transposition of the cubes in the layer
                 // Using algo from https://en.wikipedia.org/wiki/In-place_matrix_transposition#Square_matrices
-                for (let i = 0; i < this.size - 1; i++) {
-                    for (let j = i + 1; j < this.size; j++) {
+                for (var i = 0; i < this.size - 1; i++) {
+                    for (var j = i + 1; j < this.size; j++) {
                         this.swapCubies(this.getPosOnLayer(i, j, layer), this.getPosOnLayer(j, i, layer));
                     }
                 }
                 // 2. Reverse the rows
-                const halfCount = Math.floor(this.size / 2);
-                for (let i = 0; i < this.size; i++) {
-                    for (let j = 0; j < halfCount; j++) {
+                var halfCount = Math.floor(this.size / 2);
+                for (var i = 0; i < this.size; i++) {
+                    for (var j = 0; j < halfCount; j++) {
                         this.swapCubies(this.getPosOnLayer(i, j, layer), this.getPosOnLayer(i, (this.size - 1) - j, layer));
                     }
                 }
                 // 3. Call the rotate method on all the cubies in the layer
-                for (let i = 0; i < this.size; i++) {
-                    for (let j = 0; j < this.size; j++) {
-                        const pos = this.getPosOnLayer(i, j, layer);
+                for (var i = 0; i < this.size; i++) {
+                    for (var j = 0; j < this.size; j++) {
+                        var pos = this.getPosOnLayer(i, j, layer);
                         this.getCubie(pos).rotateToNewPos(layer.axis, pos);
                     }
                 }
             }
-        }
-        getColoursOnFace(face) {
-            const layer = { axis: face.axis, layerNumber: face.dir === Rubik.dirs.neg ? 0 : this.size - 1 };
-            const colours = [];
-            for (let i = 0; i < this.size; i++) {
+        };
+        Cube.prototype.getColoursOnFace = function (face) {
+            var layer = { axis: face.axis, layerNumber: face.dir === Rubik.dirs.neg ? 0 : this.size - 1 };
+            var colours = [];
+            for (var i = 0; i < this.size; i++) {
                 colours[i] = [];
-                for (let j = 0; j < this.size; j++) {
+                for (var j = 0; j < this.size; j++) {
                     colours[i][j] = this.getCubie(this.getPosOnLayer(i, j, layer)).getColour(face);
                 }
             }
             return colours;
-        }
-        setCubie(pos, cubie) {
+        };
+        Cube.prototype.setCubie = function (pos, cubie) {
             this.cubies[pos[0] + this.size * pos[1] + Math.pow(this.size, 2) * pos[2]] = cubie;
-        }
-        static genCubies(size) {
-            const cubies = [];
-            for (let z = 0; z < size; z++) {
-                for (let y = 0; y < size; y++) {
-                    for (let x = 0; x < size; x++) {
+        };
+        Cube.genCubies = function (size) {
+            var cubies = [];
+            for (var z = 0; z < size; z++) {
+                for (var y = 0; y < size; y++) {
+                    for (var x = 0; x < size; x++) {
                         cubies.push(new Cubie([x, y, z], size));
                     }
                 }
             }
             return cubies;
-        }
-        swapCubies(pos1, pos2) {
-            const cubie = this.getCubie(pos2);
+        };
+        Cube.prototype.swapCubies = function (pos1, pos2) {
+            var cubie = this.getCubie(pos2);
             this.setCubie(pos2, this.getCubie(pos1));
             this.setCubie(pos1, cubie);
-        }
-        getPosOnLayer(i, j, layer) {
+        };
+        Cube.prototype.getPosOnLayer = function (i, j, layer) {
             switch (layer.axis) {
                 case 0: return [layer.layerNumber, i, j];
                 case 1: return [i, layer.layerNumber, j];
                 case 2: return [i, j, layer.layerNumber];
             }
-        }
-    }
+        };
+        return Cube;
+    }());
     Rubik.Cube = Cube;
 })(Rubik || (Rubik = {}));
 //# sourceMappingURL=rubik.js.map
