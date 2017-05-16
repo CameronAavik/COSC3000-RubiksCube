@@ -31,8 +31,7 @@ namespace Rubik {
     type Position = [number, number, number] & { 3?: void };
 
     // A cubie is an individual cube and is a component of a Rubik's Cube. The cubie class is responsible for keeping 
-    // track of it's spatial transformations with respect to the center of the entire cube. It is also responsible for 
-    // informing about the geometry of the cubie itself to be used when rendering.
+    // track of the colours of each of it's 6 sides in the direction of each face.
     class Cubie {
         private faceMap: Map<Face, Colour>;
 
@@ -50,21 +49,12 @@ namespace Rubik {
 
         public rotateToNewPos(axis: Axis, newPos: Position): void {
             this.pos = newPos;
-            const facesToCycle: Face[] = [];
-            for (let face of faces) {
-                if (face.axis !== axis) {
-                    facesToCycle.push(face);
-                }
-            }
-            this.cycleFaceMap(facesToCycle);
-        }
-
-        private cycleFaceMap(faces: Face[]): void {
-            const count = faces.length;
-            let prev = this.getColour(faces[count - 1]);
-            for (let i = 0; i < count; i++) {
-                const current = this.getColour(faces[i]);
-                this.faceMap.set(faces[i], prev);
+            const start = 2 * axis + 2;
+            const end = start + 3;
+            let prev = this.getColour(faces[end % 6]);
+            for (let i = start; i < end; i++) {
+                const current = this.getColour(faces[i % 6]);
+                this.faceMap.set(faces[i % 6], prev);
                 prev = current;
             }
         }
