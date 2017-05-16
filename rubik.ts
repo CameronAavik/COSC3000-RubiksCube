@@ -1,7 +1,7 @@
 namespace Rubik {
-    // A colour contains an rgba vector. The colours map contains the official rubik's cube colours
-    type Colour = [number, number, number, number] & { 4?: void };
-    const colours = {
+    /** A colour contains an rgba vector. The colours map contains the official rubik's cube colours */
+    export type Colour = [number, number, number, number] & { 4?: void };
+    export const colours = {
         white: [1, 1, 1, 1] as Colour,
         blue: [0, 0x51 / 0xFF, 0xBA / 0xFF, 1] as Colour,
         yellow: [1, 0xD5 / 0xFF, 0, 1] as Colour,
@@ -11,15 +11,14 @@ namespace Rubik {
         none: [0, 0, 0, 1] as Colour
     }
 
-    type Axis = 0 | 1 | 2;
-    const axes = { x: 0 as Axis, y: 1 as Axis, z: 2 as Axis };
+    export type Axis = 0 | 1 | 2;
+    export const axes = { x: 0 as Axis, y: 1 as Axis, z: 2 as Axis };
 
-    type Direction = 1 | -1;
-    const dirs = { neg: -1 as Direction, pos: 1 as Direction };
+    export type Direction = 1 | -1;
+    export const dirs = { neg: -1 as Direction, pos: 1 as Direction };
 
-    type Face = { axis: Axis, dir: Direction, startingColour: Colour };
-
-    const faces: Face[] = [
+    export type Face = { axis: Axis, dir: Direction, startingColour: Colour };
+    export const faces: Face[] = [
         { axis: axes.x, dir: dirs.neg, startingColour: colours.green },
         { axis: axes.y, dir: dirs.neg, startingColour: colours.red },
         { axis: axes.z, dir: dirs.neg, startingColour: colours.yellow },
@@ -28,11 +27,13 @@ namespace Rubik {
         { axis: axes.z, dir: dirs.pos, startingColour: colours.white }
     ];
 
-    type Position = [number, number, number] & { 3?: void };
+    export type Position = [number, number, number] & { 3?: void };
 
-    // A cubie is an individual cube and is a component of a Rubik's Cube. The cubie class is responsible for keeping 
-    // track of the colours of each of it's 6 sides in the direction of each face.
-    class Cubie {
+    /** 
+     * A cubie is an individual cube and is a component of a Rubik's Cube. The cubie class is responsible for keeping 
+     * track of the colours of each of it's 6 sides in the direction of each face.
+     */
+    export class Cubie {
         private faceMap: Map<Face, Colour>;
 
         constructor(public pos: Position, public size: number) {
@@ -71,11 +72,13 @@ namespace Rubik {
             (pos[face.axis] === 0 && face.dir === dirs.neg) || (pos[face.axis] === size - 1 && face.dir === dirs.pos);
     }
 
-    type Layer = { axis: Axis, layerNumber: number };
+    export type Layer = { axis: Axis, layerNumber: number };
 
-    class Cube {
-        // We maintain a list of all the cubies in the cube. These cubies are sorted such that the 0th cube is LDB and
-        // the last cube is RUF and that it first increases in the x direction, then y, then z
+    export class Cube {
+        /** 
+         * We maintain a list of all the cubies in the cube. These cubies are sorted such that the 0th cube is LDB and 
+         * the last cube is RUF and that it first increases in the x direction, then y, then z
+         */
         public cubies: Cubie[];
 
         constructor(public size: number) {

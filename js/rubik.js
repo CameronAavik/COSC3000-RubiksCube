@@ -1,7 +1,7 @@
 "use strict";
 var Rubik;
 (function (Rubik) {
-    const colours = {
+    Rubik.colours = {
         white: [1, 1, 1, 1],
         blue: [0, 0x51 / 0xFF, 0xBA / 0xFF, 1],
         yellow: [1, 0xD5 / 0xFF, 0, 1],
@@ -10,18 +10,20 @@ var Rubik;
         orange: [1, 0x58 / 0xFF, 0, 1],
         none: [0, 0, 0, 1]
     };
-    const axes = { x: 0, y: 1, z: 2 };
-    const dirs = { neg: -1, pos: 1 };
-    const faces = [
-        { axis: axes.x, dir: dirs.neg, startingColour: colours.green },
-        { axis: axes.y, dir: dirs.neg, startingColour: colours.red },
-        { axis: axes.z, dir: dirs.neg, startingColour: colours.yellow },
-        { axis: axes.x, dir: dirs.pos, startingColour: colours.blue },
-        { axis: axes.y, dir: dirs.pos, startingColour: colours.orange },
-        { axis: axes.z, dir: dirs.pos, startingColour: colours.white }
+    Rubik.axes = { x: 0, y: 1, z: 2 };
+    Rubik.dirs = { neg: -1, pos: 1 };
+    Rubik.faces = [
+        { axis: Rubik.axes.x, dir: Rubik.dirs.neg, startingColour: Rubik.colours.green },
+        { axis: Rubik.axes.y, dir: Rubik.dirs.neg, startingColour: Rubik.colours.red },
+        { axis: Rubik.axes.z, dir: Rubik.dirs.neg, startingColour: Rubik.colours.yellow },
+        { axis: Rubik.axes.x, dir: Rubik.dirs.pos, startingColour: Rubik.colours.blue },
+        { axis: Rubik.axes.y, dir: Rubik.dirs.pos, startingColour: Rubik.colours.orange },
+        { axis: Rubik.axes.z, dir: Rubik.dirs.pos, startingColour: Rubik.colours.white }
     ];
-    // A cubie is an individual cube and is a component of a Rubik's Cube. The cubie class is responsible for keeping 
-    // track of the colours of each of it's 6 sides in the direction of each face.
+    /**
+     * A cubie is an individual cube and is a component of a Rubik's Cube. The cubie class is responsible for keeping
+     * track of the colours of each of it's 6 sides in the direction of each face.
+     */
     class Cubie {
         constructor(pos, size) {
             this.pos = pos;
@@ -39,22 +41,23 @@ var Rubik;
             this.pos = newPos;
             const start = 2 * axis + 2;
             const end = start + 3;
-            let prev = this.getColour(faces[end % 6]);
+            let prev = this.getColour(Rubik.faces[end % 6]);
             for (let i = start; i < end; i++) {
-                const current = this.getColour(faces[i % 6]);
-                this.faceMap.set(faces[i % 6], prev);
+                const current = this.getColour(Rubik.faces[i % 6]);
+                this.faceMap.set(Rubik.faces[i % 6], prev);
                 prev = current;
             }
         }
         static getStartingColourMap(pos, size) {
             const map = new Map();
-            faces.forEach(face => {
-                map.set(face, Cubie.isOnFace(face, pos, size) ? face.startingColour : colours.none);
+            Rubik.faces.forEach(face => {
+                map.set(face, Cubie.isOnFace(face, pos, size) ? face.startingColour : Rubik.colours.none);
             });
             return map;
         }
     }
-    Cubie.isOnFace = (face, pos, size) => (pos[face.axis] === 0 && face.dir === dirs.neg) || (pos[face.axis] === size - 1 && face.dir === dirs.pos);
+    Cubie.isOnFace = (face, pos, size) => (pos[face.axis] === 0 && face.dir === Rubik.dirs.neg) || (pos[face.axis] === size - 1 && face.dir === Rubik.dirs.pos);
+    Rubik.Cubie = Cubie;
     class Cube {
         constructor(size) {
             this.size = size;
@@ -87,7 +90,7 @@ var Rubik;
             }
         }
         getColoursOnFace(face) {
-            const layer = { axis: face.axis, layerNumber: face.dir === dirs.neg ? 0 : this.size - 1 };
+            const layer = { axis: face.axis, layerNumber: face.dir === Rubik.dirs.neg ? 0 : this.size - 1 };
             const colours = [];
             for (let i = 0; i < this.size; i++) {
                 colours[i] = [];
@@ -124,5 +127,6 @@ var Rubik;
             }
         }
     }
+    Rubik.Cube = Cube;
 })(Rubik || (Rubik = {}));
 //# sourceMappingURL=rubik.js.map
