@@ -12,15 +12,14 @@ var Rubik;
     };
     const axes = { x: 0, y: 1, z: 2 };
     const dirs = { neg: -1, pos: 1 };
-    const faces = {
-        l: { axis: axes.x, dir: dirs.neg, startingColour: colours.green },
-        r: { axis: axes.x, dir: dirs.pos, startingColour: colours.blue },
-        d: { axis: axes.y, dir: dirs.neg, startingColour: colours.red },
-        u: { axis: axes.y, dir: dirs.pos, startingColour: colours.orange },
-        b: { axis: axes.z, dir: dirs.neg, startingColour: colours.yellow },
-        f: { axis: axes.z, dir: dirs.pos, startingColour: colours.white },
-    };
-    const faceArray = [faces.l, faces.r, faces.d, faces.u, faces.b, faces.f];
+    const faces = [
+        { axis: axes.x, dir: dirs.neg, startingColour: colours.green },
+        { axis: axes.y, dir: dirs.neg, startingColour: colours.red },
+        { axis: axes.z, dir: dirs.neg, startingColour: colours.yellow },
+        { axis: axes.x, dir: dirs.pos, startingColour: colours.blue },
+        { axis: axes.y, dir: dirs.pos, startingColour: colours.orange },
+        { axis: axes.z, dir: dirs.pos, startingColour: colours.white }
+    ];
     // A cubie is an individual cube and is a component of a Rubik's Cube. The cubie class is responsible for keeping 
     // track of it's spatial transformations with respect to the center of the entire cube. It is also responsible for 
     // informing about the geometry of the cubie itself to be used when rendering.
@@ -39,17 +38,13 @@ var Rubik;
         }
         rotateToNewPos(axis, newPos) {
             this.pos = newPos;
-            switch (axis) {
-                case axes.x:
-                    this.cycleFaceMap([faces.d, faces.b, faces.u, faces.f]);
-                    return;
-                case axes.y:
-                    this.cycleFaceMap([faces.b, faces.f, faces.f, faces.r]);
-                    return;
-                case axes.z:
-                    this.cycleFaceMap([faces.r, faces.u, faces.l, faces.d]);
-                    return;
+            const facesToCycle = [];
+            for (let face of faces) {
+                if (face.axis !== axis) {
+                    facesToCycle.push(face);
+                }
             }
+            this.cycleFaceMap(facesToCycle);
         }
         cycleFaceMap(faces) {
             const count = faces.length;
@@ -62,7 +57,7 @@ var Rubik;
         }
         static getStartingColourMap(pos, size) {
             const map = new Map();
-            faceArray.forEach(face => {
+            faces.forEach(face => {
                 map.set(face, Cubie.isOnFace(face, pos, size) ? face.startingColour : colours.none);
             });
             return map;

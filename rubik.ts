@@ -18,15 +18,15 @@ namespace Rubik {
     const dirs = { neg: -1 as Direction, pos: 1 as Direction };
 
     type Face = { axis: Axis, dir: Direction, startingColour: Colour };
-    const faces = {
-        l: { axis: axes.x, dir: dirs.neg, startingColour: colours.green } as Face,
-        r: { axis: axes.x, dir: dirs.pos, startingColour: colours.blue } as Face,
-        d: { axis: axes.y, dir: dirs.neg, startingColour: colours.red } as Face,
-        u: { axis: axes.y, dir: dirs.pos, startingColour: colours.orange } as Face,
-        b: { axis: axes.z, dir: dirs.neg, startingColour: colours.yellow } as Face,
-        f: { axis: axes.z, dir: dirs.pos, startingColour: colours.white } as Face,
-    };
-    const faceArray = [faces.l, faces.r, faces.d, faces.u, faces.b, faces.f];
+
+    const faces: Face[] = [
+        { axis: axes.x, dir: dirs.neg, startingColour: colours.green },
+        { axis: axes.y, dir: dirs.neg, startingColour: colours.red },
+        { axis: axes.z, dir: dirs.neg, startingColour: colours.yellow },
+        { axis: axes.x, dir: dirs.pos, startingColour: colours.blue },
+        { axis: axes.y, dir: dirs.pos, startingColour: colours.orange },
+        { axis: axes.z, dir: dirs.pos, startingColour: colours.white }
+    ];
 
     type Position = [number, number, number] & { 3?: void };
 
@@ -50,17 +50,13 @@ namespace Rubik {
 
         public rotateToNewPos(axis: Axis, newPos: Position): void {
             this.pos = newPos;
-            switch (axis) {
-                case axes.x:
-                    this.cycleFaceMap([faces.d, faces.b, faces.u, faces.f]);
-                    return;
-                case axes.y:
-                    this.cycleFaceMap([faces.b, faces.f, faces.f, faces.r]);
-                    return;
-                case axes.z:
-                    this.cycleFaceMap([faces.r, faces.u, faces.l, faces.d]);
-                    return;
+            const facesToCycle: Face[] = [];
+            for (let face of faces) {
+                if (face.axis !== axis) {
+                    facesToCycle.push(face);
+                }
             }
+            this.cycleFaceMap(facesToCycle);
         }
 
         private cycleFaceMap(faces: Face[]): void {
@@ -75,7 +71,7 @@ namespace Rubik {
 
         private static getStartingColourMap(pos: Position, size: number): Map<Face, Colour> {
             const map = new Map<Face, Colour>();
-            faceArray.forEach(face => {
+            faces.forEach(face => {
                 map.set(face, Cubie.isOnFace(face, pos, size) ? face.startingColour : colours.none);
             });
             return map;
