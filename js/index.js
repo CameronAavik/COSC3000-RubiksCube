@@ -1,36 +1,27 @@
 "use strict";
-var WebGLDemo = (function () {
-    function WebGLDemo(canvasId, vertexShaderPath, fragmentShaderPath) {
+class WebGLDemo {
+    constructor(canvasId, vertexShaderPath, fragmentShaderPath) {
         this.canvasId = canvasId;
         this.vertexShaderPath = vertexShaderPath;
         this.fragmentShaderPath = fragmentShaderPath;
     }
-    WebGLDemo.prototype.load = function () {
-        var glContext = WebGLDemo.loadGLContext(this.canvasId);
-        var vertexShaderPath = WebGLDemo.loadFile(this.vertexShaderPath);
-        var fragmentShaderPath = WebGLDemo.loadFile(this.fragmentShaderPath);
-        var shaders = Promise.all([glContext, vertexShaderPath, fragmentShaderPath])
-            .then(function (_a) {
-            var gl = _a[0], vert = _a[1], frag = _a[2];
-            return WebGLDemo.loadShaders(gl, vert, frag);
-        });
-        var program = Promise.all([glContext, shaders])
-            .then(function (_a) {
-            var gl = _a[0], shaders = _a[1];
-            return WebGLDemo.createProgram(gl, shaders.vertexShader, shaders.fragmentShader);
-        });
-        return Promise.all([glContext, program]).then(function (_a) {
-            var gl = _a[0], program = _a[1];
-            return ({ gl: gl, program: program });
-        });
-    };
-    WebGLDemo.prototype.drawTriangle = function (glVars) {
-        var gl = glVars.gl, program = glVars.program;
-        var positionAttributeLocation = gl.getAttribLocation(program, "a_position");
-        var positionBuffer = gl.createBuffer();
+    load() {
+        const glContext = WebGLDemo.loadGLContext(this.canvasId);
+        const vertexShaderPath = WebGLDemo.loadFile(this.vertexShaderPath);
+        const fragmentShaderPath = WebGLDemo.loadFile(this.fragmentShaderPath);
+        const shaders = Promise.all([glContext, vertexShaderPath, fragmentShaderPath])
+            .then(([gl, vert, frag]) => WebGLDemo.loadShaders(gl, vert, frag));
+        const program = Promise.all([glContext, shaders])
+            .then(([gl, shaders]) => WebGLDemo.createProgram(gl, shaders.vertexShader, shaders.fragmentShader));
+        return Promise.all([glContext, program]).then(([gl, program]) => ({ gl, program }));
+    }
+    drawTriangle(glVars) {
+        const { gl, program } = glVars;
+        const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+        const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         // four 3d points (square)
-        var positions = [
+        const positions = [
             0.5, 0.5, 0.0,
             -0.5, 0.5, 0.0,
             0.5, -0.5, 0.0,
@@ -52,18 +43,18 @@ var WebGLDemo = (function () {
         // Bind the position buffer.
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-        var size = 3; // 2 components per iteration
-        var type = gl.FLOAT; // the data is 32bit floats
-        var normalize = false; // don't normalize the data
-        var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
-        var bufferOffset = 0; // start at the beginning of the buffer
+        const size = 3; // 2 components per iteration
+        const type = gl.FLOAT; // the data is 32bit floats
+        const normalize = false; // don't normalize the data
+        const stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
+        const bufferOffset = 0; // start at the beginning of the buffer
         gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, bufferOffset);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    };
-    WebGLDemo.loadGLContext = function (canvasId) {
-        return new Promise(function (resolve, reject) {
-            var canvas = document.getElementById(canvasId);
-            var ctx = canvas.getContext("webgl");
+    }
+    static loadGLContext(canvasId) {
+        return new Promise((resolve, reject) => {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext("webgl");
             if (ctx !== null) {
                 resolve(ctx);
             }
@@ -71,56 +62,53 @@ var WebGLDemo = (function () {
                 reject(new Error("WebGL not available"));
             }
         });
-    };
-    WebGLDemo.loadFile = function (filePath) {
-        return new Promise(function (resolve, reject) {
-            var xhr = new XMLHttpRequest();
-            xhr.onreadystatechange = function () {
+    }
+    static loadFile(filePath) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = () => {
                 if (xhr.readyState == 4) {
                     if (xhr.status == 200) {
                         resolve(xhr.responseText);
                     }
                     else {
-                        reject(new Error("Failed to load " + filePath));
+                        reject(new Error(`Failed to load ${filePath}`));
                     }
                 }
             };
             xhr.open("GET", filePath);
             xhr.send();
         });
-    };
-    WebGLDemo.loadShaders = function (gl, vertexShader, fragmentShader) {
+    }
+    static loadShaders(gl, vertexShader, fragmentShader) {
         return Promise.all([
             WebGLDemo.createShader(gl, vertexShader, gl.VERTEX_SHADER),
             WebGLDemo.createShader(gl, fragmentShader, gl.FRAGMENT_SHADER)
-        ]).then(function (_a) {
-            var vertexShader = _a[0], fragmentShader = _a[1];
-            return ({ vertexShader: vertexShader, fragmentShader: fragmentShader });
-        });
-    };
-    WebGLDemo.createShader = function (gl, source, type) {
-        return new Promise(function (resolve, reject) {
-            var shader = gl.createShader(type);
+        ]).then(([vertexShader, fragmentShader]) => ({ vertexShader, fragmentShader }));
+    }
+    static createShader(gl, source, type) {
+        return new Promise((resolve, reject) => {
+            const shader = gl.createShader(type);
             if (shader === null) {
                 reject(new Error("Unable to create WebGL Shader"));
                 return;
             }
             gl.shaderSource(shader, source);
             gl.compileShader(shader);
-            var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+            const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
             if (success) {
                 resolve(shader);
             }
             else {
-                var log = gl.getShaderInfoLog(shader);
+                const log = gl.getShaderInfoLog(shader);
                 gl.deleteShader(shader);
                 reject(log);
             }
         });
-    };
-    WebGLDemo.createProgram = function (gl, vertexShader, fragmentShader) {
-        return new Promise(function (resolve, reject) {
-            var program = gl.createProgram();
+    }
+    static createProgram(gl, vertexShader, fragmentShader) {
+        return new Promise((resolve, reject) => {
+            const program = gl.createProgram();
             if (program === null) {
                 reject(new Error("Unable to create WebGL Program"));
                 return;
@@ -128,19 +116,18 @@ var WebGLDemo = (function () {
             gl.attachShader(program, vertexShader);
             gl.attachShader(program, fragmentShader);
             gl.linkProgram(program);
-            var success = gl.getProgramParameter(program, gl.LINK_STATUS);
+            const success = gl.getProgramParameter(program, gl.LINK_STATUS);
             if (success) {
                 resolve(program);
             }
             else {
-                var log = gl.getProgramInfoLog(program);
+                const log = gl.getProgramInfoLog(program);
                 gl.deleteProgram(program);
                 reject(log);
             }
         });
-    };
-    return WebGLDemo;
-}());
-var demo = new WebGLDemo("glCanvas", "shaders/vertex-shader.glsl", "shaders/fragment-shader.glsl");
+    }
+}
+const demo = new WebGLDemo("glCanvas", "shaders/vertex-shader.glsl", "shaders/fragment-shader.glsl");
 demo.load().then(demo.drawTriangle).catch(console.log);
 //# sourceMappingURL=index.js.map
