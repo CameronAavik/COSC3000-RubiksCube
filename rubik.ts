@@ -1,158 +1,100 @@
 namespace Rubik {
-    /** A colour contains an rgba vector. The colours map contains the official rubik's cube colours */
-    export type Colour = [number, number, number, number] & { 4?: void };
-    export const colours = {
-        white: [1, 1, 1, 1] as Colour,
-        blue: [0, 0x51 / 0xFF, 0xBA / 0xFF, 1] as Colour,
-        yellow: [1, 0xD5 / 0xFF, 0, 1] as Colour,
-        green: [0, 0x9E / 0xFF, 0x60 / 0xFF, 1] as Colour,
-        red: [0xC4 / 0xFF, 0x1E / 0xFF, 0x3A / 0xFF, 1] as Colour,
-        orange: [1, 0x58 / 0xFF, 0, 1] as Colour,
-        none: [0, 0, 0, 1] as Colour
+    // Very simple definition of a vector and matrix for the purposes of the cube
+    type Vec3 = [number, number, number] & { 3?: void };
+    type Matrix3 = [Vec3, Vec3, Vec3] & { 3?: void };
+    const IdentityMatrix: Matrix3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+
+    /**
+     * Multiplies two matrices and returns the result
+     * @param a A 3x3 Matrix
+     * @param b A 3x3 Matrix
+     */
+    function multiplyMatrix(a: Matrix3, b: Matrix3): Matrix3 {
+        return [0, 1, 2].map(
+            i => [0, 1, 2].map(
+                j => [0, 1, 2].map(k => a[i][k] * b[k][j]).reduce((a, b) => a + b, 0)
+            )
+        ) as Matrix3;
     }
 
-    export type Axis = 0 | 1 | 2;
-    export const axes = { x: 0 as Axis, y: 1 as Axis, z: 2 as Axis };
+    /**
+     * See https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+     * @param axis The axis of rotation
+     * @param angle The angle being rotated in radians (use right handed rule)
+     */
+    function getRotationMatrix(axis: Vec3, angle: number): Matrix3 {
+        const [x, y, z] = axis;
+        const cos = Math.cos(angle);
+        const mcos = 1 - cos;
+        const sin = Math.sin(angle);
+        return [
+            [cos + x * x * mcos, x * y * mcos - x * sin, x * z * mcos + y * sin],
+            [y * x * mcos + z * sin, cos + y * y * mcos, y * z * mcos - x * sin],
+            [z * x * mcos - y * sin, z * y * mcos + x * sin, cos + z * z * mcos]
+        ];
+    }
 
-    export type Direction = 1 | -1;
-    export const dirs = { neg: -1 as Direction, pos: 1 as Direction };
-
-    export type Face = { axis: Axis, dir: Direction, startingColour: Colour };
-    export const faces: Face[] = [
-        { axis: axes.x, dir: dirs.neg, startingColour: colours.green },
-        { axis: axes.y, dir: dirs.neg, startingColour: colours.red },
-        { axis: axes.z, dir: dirs.neg, startingColour: colours.yellow },
-        { axis: axes.x, dir: dirs.pos, startingColour: colours.blue },
-        { axis: axes.y, dir: dirs.pos, startingColour: colours.orange },
-        { axis: axes.z, dir: dirs.pos, startingColour: colours.white }
-    ];
-
-    export type Position = [number, number, number] & { 3?: void };
+    /**
+     * A cubie is an individual cube inside the Rubik's Cube. It is completely represented by it's starting position 
+     * and a rotation matrix
+     */
+    type Cubie = { readonly startPos: Vec3, readonly rotationMatrix: Matrix3 }
 
     /** 
-     * A cubie is an individual cube and is a component of a Rubik's Cube. The cubie class is responsible for keeping 
-     * track of the colours of each of it's 6 sides in the direction of each face.
+     * We maintain a list of all the cubies in the cube. These cubies are sorted such that the 0th cube is LDB and 
+     * the last cube is RUF and that it first increases in the x direction, then y, then z. We also maintain the size
+     * of the cube as described by createCube.
      */
-    export class Cubie {
-        private faceMap: Map<Face, Colour>;
+    export type Cube = { readonly cubies: Cubie[], readonly size: number };
 
-        constructor(public pos: Position, public size: number) {
-            this.faceMap = Cubie.getStartingColourMap(pos, size);
-        }
-
-        public getColour(face: Face): Colour {
-            const colour = this.faceMap.get(face);
-            if (colour === undefined) {
-                throw Error("There is no colour for that Face.");
-            }
-            return colour;
-        }
-
-        public rotateToNewPos(axis: Axis, newPos: Position): void {
-            this.pos = newPos;
-            const start = 2 * axis + 2;
-            const end = start + 3;
-            let prev = this.getColour(faces[end % 6]);
-            for (let i = start; i < end; i++) {
-                const current = this.getColour(faces[i % 6]);
-                this.faceMap.set(faces[i % 6], prev);
-                prev = current;
+    /**
+     * Creates a new Cube of a given size
+     * @param size The size of the cube. a 3x3 cube is size 3
+     */
+    export function createCube(size: number): Cube {
+        const cubies: Cubie[] = [];
+        for (let z = 0; z < size; z++) {
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    cubies.push({ startPos: [x, y, z], rotationMatrix: IdentityMatrix });
+                }
             }
         }
-
-        private static getStartingColourMap(pos: Position, size: number): Map<Face, Colour> {
-            const map = new Map<Face, Colour>();
-            faces.forEach(face => {
-                map.set(face, Cubie.isOnFace(face, pos, size) ? face.startingColour : colours.none);
-            });
-            return map;
-        }
-
-        private static isOnFace = (face: Face, pos: Position, size: number): boolean =>
-            (pos[face.axis] === 0 && face.dir === dirs.neg) || (pos[face.axis] === size - 1 && face.dir === dirs.pos);
+        return { cubies, size };
     }
 
-    export type Layer = { axis: Axis, layerNumber: number };
+    export type Layer = { readonly axisNumber: number, readonly layerNum: number };
 
-    export class Cube {
-        /** 
-         * We maintain a list of all the cubies in the cube. These cubies are sorted such that the 0th cube is LDB and 
-         * the last cube is RUF and that it first increases in the x direction, then y, then z
-         */
-        public cubies: Cubie[];
+    /**
+     * Will return the index into the cubies array belonging to the (i, j)th cubie in the layer
+     * @param cubeSize The size of the cube
+     * @param i The ith row of the layer
+     * @param j The jth column of the layer
+     * @param layer The layer information
+     */
+    function getCubieIndexInLayerPos(cubeSize: number, i: number, j: number, layer: Layer): number {
+        const pos = [i, j];
+        pos.splice(layer.axisNumber, 0, layer.layerNum);
+        return pos[0] + cubeSize * pos[1] + (cubeSize ** 2) * pos[2]
+    }
 
-        constructor(public size: number) {
-            this.cubies = Cube.genCubies(size);
-        }
-
-        public rotate(rotations: number, layer: Layer) {
-            for (let rot = 0; rot < rotations; rot++) {
-                // 1. Perform an in-place matrix transposition of the cubes in the layer
-                // Using algo from https://en.wikipedia.org/wiki/In-place_matrix_transposition#Square_matrices
-                for (let i = 0; i < this.size - 1; i++) {
-                    for (let j = i + 1; j < this.size; j++) {
-                        this.swapCubies(this.getPosOnLayer(i, j, layer), this.getPosOnLayer(j, i, layer));
-                    }
-                }
-                // 2. Reverse the rows
-                const halfCount = Math.floor(this.size / 2);
-                for (let i = 0; i < this.size; i++) {
-                    for (let j = 0; j < halfCount; j++) {
-                        this.swapCubies(this.getPosOnLayer(i, j, layer), this.getPosOnLayer(i, (this.size - 1) - j, layer));
-                    }
-                }
-                // 3. Call the rotate method on all the cubies in the layer
-                for (let i = 0; i < this.size; i++) {
-                    for (let j = 0; j < this.size; j++) {
-                        const pos = this.getPosOnLayer(i, j, layer);
-                        this.getCubie(pos).rotateToNewPos(layer.axis, pos);
-                    }
-                }
+    /**
+     * Rotates a given layer of the cube and returns the new cube
+     * @param cube The cube which is getting it's layer rotated
+     * @param rotationLayer The information about the layer being rotated
+     */
+    export function rotateLayer(cube: Cube, rotationLayer: Layer): Cube {
+        const axis = IdentityMatrix[rotationLayer.axisNumber];
+        const rotationMatrix = getRotationMatrix(axis, Math.PI / 2);
+        const getCubieIndex = (i: number, j: number) => getCubieIndexInLayerPos(cube.size, i, j, rotationLayer);
+        const cubies = cube.cubies.slice(); // Create a copy of the cube
+        for (let i = 0; i < cube.size; i++) {
+            for (let j = 0; j < cube.size; j++) {
+                const oldCubie = cube.cubies[getCubieIndex(cube.size - j - 1, i)];
+                const newCubieRotMatrix = multiplyMatrix(oldCubie.rotationMatrix, rotationMatrix);
+                cubies[getCubieIndex(i, j)] = { startPos: oldCubie.startPos, rotationMatrix: newCubieRotMatrix };
             }
         }
-
-        public getColoursOnFace(face: Face): Colour[][] {
-            const layer: Layer = { axis: face.axis, layerNumber: face.dir === dirs.neg ? 0 : this.size - 1 };
-            const colours: Colour[][] = [];
-            for (let i = 0; i < this.size; i++) {
-                colours[i] = [];
-                for (let j = 0; j < this.size; j++) {
-                    colours[i][j] = this.getCubie(this.getPosOnLayer(i, j, layer)).getColour(face);
-                }
-            }
-            return colours;
-        }
-
-        private getCubie = (pos: Position) => this.cubies[pos[0] + this.size * pos[1] + (this.size ** 2) * pos[2]];
-
-        private setCubie(pos: Position, cubie: Cubie): void {
-            this.cubies[pos[0] + this.size * pos[1] + this.size ** 2 * pos[2]] = cubie;
-        }
-
-        private static genCubies(size: number): Cubie[] {
-            const cubies: Cubie[] = [];
-            for (let z = 0; z < size; z++) {
-                for (let y = 0; y < size; y++) {
-                    for (let x = 0; x < size; x++) {
-                        cubies.push(new Cubie([x, y, z], size));
-                    }
-                }
-            }
-            return cubies;
-        }
-
-        private swapCubies(pos1: Position, pos2: Position): void {
-            const cubie = this.getCubie(pos2);
-            this.setCubie(pos2, this.getCubie(pos1));
-            this.setCubie(pos1, cubie);
-        }
-
-        private getPosOnLayer(i: number, j: number, layer: Layer): Position {
-            switch (layer.axis) {
-                case 0: return [layer.layerNumber, i, j];
-                case 1: return [i, layer.layerNumber, j];
-                case 2: return [i, j, layer.layerNumber];
-            }
-        }
+        return { cubies, size: cube.size }
     }
 }

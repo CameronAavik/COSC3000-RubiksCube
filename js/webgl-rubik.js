@@ -85,9 +85,5 @@ var WebGLRubik;
             return total;
         }
     }
-    class WebGLCubie extends Rubik.Cubie {
-    }
-    class WebGLCube extends Rubik.Cube {
-    }
 })(WebGLRubik || (WebGLRubik = {}));
 //# sourceMappingURL=webgl-rubik.js.map

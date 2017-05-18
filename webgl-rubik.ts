@@ -97,12 +97,4 @@ namespace WebGLRubik {
             return total;
         }
     }
-
-    class WebGLCubie extends Rubik.Cubie {
-
-    }
-
-    class WebGLCube extends Rubik.Cube {
-
-    }
 }
