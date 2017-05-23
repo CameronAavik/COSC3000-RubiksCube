@@ -4,7 +4,7 @@ namespace Rubik {
     // Tracks the face that each original face has ended up on
     export type FaceMap = [Face, Face, Face, Face, Face, Face] & { 6?: void };
     // A position vector that tracks x, y, and z values
-    export type Position = Readonly<[number, number, number] & { 3?: void }>;
+    export type Position = Utils.Vec3<number>;
 
     /**
      * A cubie is an individual cube inside the Rubik's Cube. It is completely represented by it's starting position 
@@ -25,9 +25,9 @@ namespace Rubik {
      */
     export function createCube(size: number): Cube {
         const cubies: Cubie[] = [];
-        range(size).forEach(z => {
-            range(size).forEach(y => {
-                range(size).forEach(x => {
+        Utils.range(size).forEach(z => {
+            Utils.range(size).forEach(y => {
+                Utils.range(size).forEach(x => {
                     cubies.push({ startPos: [x, y, z], faces: [0, 1, 2, 3, 4, 5] });
                 });
             });
@@ -47,8 +47,8 @@ namespace Rubik {
     export function rotateLayer(cube: Cube, rotationLayer: Layer): Cube {
         const getCubieIndex = (i: number, j: number) => getCubieIndexInLayerPos(cube.size, i, j, rotationLayer);
         const cubies = cube.cubies.slice(); // Create a copy of the cube
-        range(cube.size).forEach(i => {
-            range(cube.size).forEach(j => {
+        Utils.range(cube.size).forEach(i => {
+            Utils.range(cube.size).forEach(j => {
                 const oldCubie = cube.cubies[getCubieIndex(cube.size - j - 1, i)];
                 const newFaceMap = getFacesAfterRotation(oldCubie.faces, rotationLayer.axis);
                 cubies[getCubieIndex(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap };
@@ -84,7 +84,45 @@ namespace Rubik {
         pos.splice(layer.axis, 0, layer.layerNum);
         return pos[0] + cubeSize * pos[1] + (cubeSize ** 2) * pos[2]
     }
+}
+
+namespace Utils {
+    export type Vec3<T> = [T, T, T] & { 3?: void }
+    export type Vec4<T> = [T, T, T, T] & { 4?: void };
+    export type Mat4<T> = [Vec4<T>, Vec4<T>, Vec4<T>, Vec4<T>] & { 4?: void };
+    const indexes: Vec4<0 | 1 | 2 | 3> = [0, 1, 2, 3];
+    export const Mat4Identity: Mat4<number> = indexes.map(i => indexes.map(j => i === j ? 1 : 0));
+
+    export function mulMats(a: Mat4<number>, b: Mat4<number>): Mat4<number> {
+        return indexes.map(i => indexes.map(j => indexes.map(k => a[i][k] * b[k][j]).reduce(sum, 0)));
+    }
+
+    export function mulMatVec(a: Mat4<number>, b: Vec4<number>): Vec4<number> {
+        return indexes.map(i => indexes.map(j => a[i][j] * b[j]).reduce(sum, 0));
+    }
+
+    export function getTranslationMatrix([x, y, z]: Vec3<number>): Mat4<number> {
+        return [[x, 0, 0, 0], [0, y, 0, 0], [0, 0, z, 0], [0, 0, 0, 1]];
+    }
+
+    export function getRotationMatrix([x, y, z]: Vec3<number>, angle: number): Mat4<number> {
+        const cos = Math.cos(angle);
+        const mcos = 1 - cos;
+        const sin = Math.sin(angle);
+        return [
+            [cos + x * x * mcos, x * y * mcos - x * sin, x * z * mcos + y * sin, 0],
+            [y * x * mcos + z * sin, cos + y * y * mcos, y * z * mcos - x * sin, 0],
+            [z * x * mcos - y * sin, z * y * mcos + x * sin, cos + z * z * mcos, 0],
+            [0, 0, 0, 1]
+        ];
+    }
 
     // Helper function for generation the interval [0, max)
-    const range = (max: number) => Array.from({ length: max }, (_, k) => k);
+    export const range = (max: number) => Array.from({ length: max }, (_, k) => k);
+    export const sum = (a: number, b: number) => a + b;
+}
+
+namespace WebGLRubiks
+{
+    
 }

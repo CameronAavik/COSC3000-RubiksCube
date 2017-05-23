@@ -7,9 +7,9 @@ var Rubik;
      */
     function createCube(size) {
         const cubies = [];
-        range(size).forEach(z => {
-            range(size).forEach(y => {
-                range(size).forEach(x => {
+        Utils.range(size).forEach(z => {
+            Utils.range(size).forEach(y => {
+                Utils.range(size).forEach(x => {
                     cubies.push({ startPos: [x, y, z], faces: [0, 1, 2, 3, 4, 5] });
                 });
             });
@@ -25,8 +25,8 @@ var Rubik;
     function rotateLayer(cube, rotationLayer) {
         const getCubieIndex = (i, j) => getCubieIndexInLayerPos(cube.size, i, j, rotationLayer);
         const cubies = cube.cubies.slice(); // Create a copy of the cube
-        range(cube.size).forEach(i => {
-            range(cube.size).forEach(j => {
+        Utils.range(cube.size).forEach(i => {
+            Utils.range(cube.size).forEach(j => {
                 const oldCubie = cube.cubies[getCubieIndex(cube.size - j - 1, i)];
                 const newFaceMap = getFacesAfterRotation(oldCubie.faces, rotationLayer.axis);
                 cubies[getCubieIndex(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap };
@@ -67,7 +67,33 @@ var Rubik;
         pos.splice(layer.axis, 0, layer.layerNum);
         return pos[0] + cubeSize * pos[1] + (Math.pow(cubeSize, 2)) * pos[2];
     }
-    // Helper function for generation the interval [0, max)
-    const range = (max) => Array.from({ length: max }, (_, k) => k);
 })(Rubik || (Rubik = {}));
+var Utils;
+(function (Utils) {
+    const indexes = [0, 1, 2, 3];
+    function mulMats(a, b) {
+        return indexes.map(i => indexes.map(j => indexes.map(k => a[i][k] * b[k][j]).reduce(Utils.sum, 0)));
+    }
+    Utils.mulMats = mulMats;
+    function mulMatVec(a, b) {
+        return indexes.map(i => indexes.map(j => a[i][j] * b[j]).reduce(Utils.sum, 0));
+    }
+    Utils.mulMatVec = mulMatVec;
+    function getRotationMatrix(axis, angle) {
+        const [x, y, z] = axis;
+        const cos = Math.cos(angle);
+        const mcos = 1 - cos;
+        const sin = Math.sin(angle);
+        return [
+            [cos + x * x * mcos, x * y * mcos - x * sin, x * z * mcos + y * sin, 0],
+            [y * x * mcos + z * sin, cos + y * y * mcos, y * z * mcos - x * sin, 0],
+            [z * x * mcos - y * sin, z * y * mcos + x * sin, cos + z * z * mcos, 0],
+            [0, 0, 0, 1]
+        ];
+    }
+    Utils.getRotationMatrix = getRotationMatrix;
+    // Helper function for generation the interval [0, max)
+    Utils.range = (max) => Array.from({ length: max }, (_, k) => k);
+    Utils.sum = (a, b) => a + b;
+})(Utils || (Utils = {}));
 //# sourceMappingURL=rubik.js.map
