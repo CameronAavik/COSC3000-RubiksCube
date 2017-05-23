@@ -25,9 +25,9 @@ namespace Rubik {
      */
     export function createCube(size: number): Cube {
         const cubies: Cubie[] = [];
-        range(0, size).forEach(z => {
-            range(0, size).forEach(y => {
-                range(0, size).forEach(x => {
+        range(size).forEach(z => {
+            range(size).forEach(y => {
+                range(size).forEach(x => {
                     cubies.push({ startPos: [x, y, z], faces: [0, 1, 2, 3, 4, 5] });
                 });
             });
@@ -47,8 +47,8 @@ namespace Rubik {
     export function rotateLayer(cube: Cube, rotationLayer: Layer): Cube {
         const getCubieIndex = (i: number, j: number) => getCubieIndexInLayerPos(cube.size, i, j, rotationLayer);
         const cubies = cube.cubies.slice(); // Create a copy of the cube
-        range(0, cube.size).forEach(i => {
-            range(0, cube.size).forEach(j => {
+        range(cube.size).forEach(i => {
+            range(cube.size).forEach(j => {
                 const oldCubie = cube.cubies[getCubieIndex(cube.size - j - 1, i)];
                 const newFaceMap = getFacesAfterRotation(oldCubie.faces, rotationLayer.axis);
                 cubies[getCubieIndex(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap };

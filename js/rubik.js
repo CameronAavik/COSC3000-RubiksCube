@@ -7,9 +7,9 @@ var Rubik;
      */
     function createCube(size) {
         const cubies = [];
-        range(0, size).forEach(z => {
-            range(0, size).forEach(y => {
-                range(0, size).forEach(x => {
+        range(size).forEach(z => {
+            range(size).forEach(y => {
+                range(size).forEach(x => {
                     cubies.push({ startPos: [x, y, z], faces: [0, 1, 2, 3, 4, 5] });
                 });
             });
@@ -25,8 +25,8 @@ var Rubik;
     function rotateLayer(cube, rotationLayer) {
         const getCubieIndex = (i, j) => getCubieIndexInLayerPos(cube.size, i, j, rotationLayer);
         const cubies = cube.cubies.slice(); // Create a copy of the cube
-        range(0, cube.size).forEach(i => {
-            range(0, cube.size).forEach(j => {
+        range(cube.size).forEach(i => {
+            range(cube.size).forEach(j => {
                 const oldCubie = cube.cubies[getCubieIndex(cube.size - j - 1, i)];
                 const newFaceMap = getFacesAfterRotation(oldCubie.faces, rotationLayer.axis);
                 cubies[getCubieIndex(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap };
