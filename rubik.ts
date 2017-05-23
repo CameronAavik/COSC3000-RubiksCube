@@ -1,30 +1,30 @@
 namespace Rubik {
     // There are 6 faces, 0=L,1=R,2=D,3=U,4=B,5=F
-    export type Face = 0 | 1 | 2 | 3 | 4 | 5;
+    type Face = 0 | 1 | 2 | 3 | 4 | 5;
     // Tracks the face that each original face has ended up on
-    export type FaceMap = [Face, Face, Face, Face, Face, Face] & { 6?: void };
+    type FaceMap = [Face, Face, Face, Face, Face, Face] & { 6?: void };
     // A position vector that tracks x, y, and z values
-    export type Position = Utils.Vec3<number>;
+    type Position = Utils.Vec3<number>;
 
     /**
      * A cubie is an individual cube inside the Rubik's Cube. It is completely represented by it's starting position 
      * and a rotation matrix
      */
-    export type Cubie = { readonly startPos: Position, readonly faces: FaceMap }
+    type CubieData = { readonly startPos: Position, readonly faces: FaceMap }
 
     /** 
      * We maintain a list of all the cubies in the cube. These cubies are sorted such that the 0th cube is LDB and 
      * the last cube is RUF and that it first increases in the x direction, then y, then z. We also maintain the size
      * of the cube as described by createCube.
      */
-    export type Cube = { readonly cubies: ReadonlyArray<Cubie>, readonly size: number };
+    type CubeData = { readonly cubies: ReadonlyArray<CubieData>, readonly size: number };
 
     /**
      * Creates a new Cube of a given size
      * @param size The size of the cube. a 3x3 cube is size 3
      */
-    export function createCube(size: number): Cube {
-        const cubies: Cubie[] = [];
+    function createCubeData(size: number): CubeData {
+        const cubies: CubieData[] = [];
         Utils.range(size).forEach(z => {
             Utils.range(size).forEach(y => {
                 Utils.range(size).forEach(x => {
@@ -36,22 +36,22 @@ namespace Rubik {
     }
 
     // There are three axes, 0=x, 1=y, 2=z
-    export type Axis = 0 | 1 | 2;
-    export type Layer = { readonly axis: Axis, readonly layerNum: number };
+    type Axis = 0 | 1 | 2;
+    type Layer = { readonly axis: Axis, readonly layerNum: number };
 
     /**
     * Rotates a given layer of the cube and returns the new cube
     * @param cube The cube which is getting it's layer rotated
     * @param rotationLayer The information about the layer being rotated
     */
-    export function rotateLayer(cube: Cube, rotationLayer: Layer): Cube {
-        const getCubieIndex = (i: number, j: number) => getCubieIndexInLayerPos(cube.size, i, j, rotationLayer);
+    function rotateLayer(cube: CubeData, rotationLayer: Layer): CubeData {
+        const getCubie = (i: number, j: number) => getCubieIndex(cube.size, i, j, rotationLayer);
         const cubies = cube.cubies.slice(); // Create a copy of the cube
         Utils.range(cube.size).forEach(i => {
             Utils.range(cube.size).forEach(j => {
-                const oldCubie = cube.cubies[getCubieIndex(cube.size - j - 1, i)];
+                const oldCubie = cube.cubies[getCubie(cube.size - j - 1, i)];
                 const newFaceMap = getFacesAfterRotation(oldCubie.faces, rotationLayer.axis);
-                cubies[getCubieIndex(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap };
+                cubies[getCubie(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap };
             });
         });
         return { cubies, size: cube.size }
@@ -79,10 +79,80 @@ namespace Rubik {
      * @param j The jth column of the layer
      * @param layer The layer information
      */
-    function getCubieIndexInLayerPos(cubeSize: number, i: number, j: number, layer: Layer): number {
+    function getCubieIndex(cubeSize: number, i: number, j: number, layer: Layer): number {
         const pos = [i, j];
         pos.splice(layer.axis, 0, layer.layerNum);
         return pos[0] + cubeSize * pos[1] + (cubeSize ** 2) * pos[2]
+    }
+
+    function getRotMatrixFromFaceMap(faces: FaceMap): Utils.Mat4<number> {
+        const mat = rotMatrixMapping.get(JSON.stringify(faces));
+        if (mat === undefined) {
+            throw Error("Could not find rotation matrix for that face mapping");
+        }
+        return mat;
+    }
+
+    const rotMatrixMapping = generateRotMatrixMapping();
+    function generateRotMatrixMapping(): Map<string, Utils.Mat4<number>> {
+        const rots = [Utils.getRotationMatrix([1, 0, 0], Math.PI / 2), Utils.getRotationMatrix([0, 1, 0], Math.PI / 2)];
+        const startPerms: Axis[][] = [[], [1], [1, 1], [1, 1, 1], [0, 1], [0, 0, 0, 1]];
+        const rotMap = new Map<string, Utils.Mat4<number>>();
+        for (let startPerm of startPerms) {
+            let mat = Utils.Mat4Identity;
+            let faceMap: FaceMap = [0, 1, 2, 3, 4, 5];
+            for (let turn of startPerm) {
+                mat = Utils.mulMats(mat, rots[turn])
+                faceMap = getFacesAfterRotation(faceMap, turn);
+            }
+            for (let i = 0; i < 4; i++) {
+                rotMap.set(JSON.stringify(faceMap), mat);
+                mat = Utils.mulMats(mat, rots[0])
+                faceMap = getFacesAfterRotation(faceMap, 0);
+            }
+        }
+        return rotMap;
+    }
+
+    export type Cube = {
+        readonly data: CubeData,
+        readonly cubies: Cubie[],
+        readonly tMat: Utils.Mat4<number>,
+        readonly rMat: Utils.Mat4<number>
+    }
+
+    export type Cubie = {
+        readonly data: CubieData,
+        readonly tMat: Utils.Mat4<number>,
+        readonly rMat: Utils.Mat4<number>
+    }
+
+    export function createGLCube(size: number): Cube {
+        const data = createCubeData(size);
+        const cubies = data.cubies.map(getWebGLCubieFromCubie);
+        return { data, cubies, tMat: Utils.Mat4Identity, rMat: Utils.Mat4Identity }
+    }
+
+    export type Move = "L" | "R" | "D" | "U" | "B" | "F";
+    export function applyMove(cube: Cube, move: Move, rotations: number): Cube {
+        const axis: Axis = (move === "L" || move === "R") ? 0 : (move === "D" || move === "U") ? 1 : 2;
+        const isOpposite = move === "R" || move === "U" || move === "F";
+        const layerNum = isOpposite ? cube.data.size - 1 : 0;
+        const rotationCount = isOpposite ? (4 - (rotations % 4)) : rotations % 4;
+        let newCube = cube.data;
+        Utils.range(rotationCount).forEach(_ => {
+            newCube = rotateLayer(newCube, { axis, layerNum })
+        })
+        const newWebGLCubies = newCube.cubies.map(getWebGLCubieFromCubie);
+        return { data: newCube, cubies: newWebGLCubies, tMat: cube.tMat, rMat: cube.rMat }
+    }
+
+    function getWebGLCubieFromCubie(cubieData: CubieData): Cubie {
+        return {
+            data: cubieData,
+            tMat: Utils.getTranslationMatrix(cubieData.startPos),
+            rMat: getRotMatrixFromFaceMap(cubieData.faces)
+        }
     }
 }
 
@@ -101,6 +171,19 @@ namespace Utils {
         return indexes.map(i => indexes.map(j => a[i][j] * b[j]).reduce(sum, 0));
     }
 
+    export function VecToFloatArray(vec: Vec4<number>): Float32Array {
+        return new Float32Array(vec);
+    }
+
+    export function MatToFloatArray(mat: Mat4<number>): Float32Array {
+        return new Float32Array([
+            mat[0][0], mat[0][1], mat[0][2], mat[0][3],
+            mat[1][0], mat[1][1], mat[1][2], mat[1][3],
+            mat[2][0], mat[2][1], mat[2][2], mat[2][3],
+            mat[3][0], mat[3][1], mat[3][2], mat[3][3],
+        ]);
+    }
+
     export function getTranslationMatrix([x, y, z]: Vec3<number>): Mat4<number> {
         return [[x, 0, 0, 0], [0, y, 0, 0], [0, 0, z, 0], [0, 0, 0, 1]];
     }
@@ -117,12 +200,199 @@ namespace Utils {
         ];
     }
 
+    export function getPerspectiveMatrix(fov: number, aspect: number, near: number, far: number): Mat4<number> {
+        const f = 1 / Math.tan(fov) / 2;
+        const nf = 1 / (near - far);
+        return [[f / aspect, 0, 0, 0], [0, f, 0, 0], [0, 0, (far + near) * nf, -1], [0, 0, 2 * far * near * nf, 0]];
+    }
+
     // Helper function for generation the interval [0, max)
     export const range = (max: number) => Array.from({ length: max }, (_, k) => k);
-    export const sum = (a: number, b: number) => a + b;
+    const sum = (a: number, b: number) => a + b;
 }
 
-namespace WebGLRubiks
-{
-    
+namespace Program {
+    export type InputVars = {
+        readonly canvasId: string,
+        readonly vertexShaderPath: string,
+        readonly fragmentShaderPath: string
+    }
+
+    let cube: Rubik.Cube;
+    let gl: WebGLRenderingContext;
+    let glProg: WebGLProgram;
+    let canvas: HTMLCanvasElement;
+    let pMat: Utils.Mat4<number>;
+
+    let vertData: number[] = [];
+    let indexData: number[] = [];
+
+    let vertBuffer: WebGLBuffer;
+    let indexBuffer: WebGLBuffer;
+
+    export function loadState(input: InputVars) {
+        const canvasElem = document.getElementById(input.canvasId) as HTMLCanvasElement;
+        const glContext = loadGLContext(canvasElem);
+        const vertexShader = loadFile(input.vertexShaderPath);
+        const fragmentShader = loadFile(input.fragmentShaderPath);
+        const shaders = Promise.all([glContext, vertexShader, fragmentShader])
+            .then(([gl, vert, frag]) => loadShaders(gl, vert, frag));
+        const program = Promise.all([glContext, shaders])
+            .then(([gl, shaders]) => createProgram(gl, shaders.vertexShader, shaders.fragmentShader));
+        return Promise.all([glContext, program]).then(([glContext, glProgram]) => {
+            cube = Rubik.createGLCube(3);
+            gl = glContext;
+            glProg = glProgram;
+            canvas = canvasElem;
+            pMat = Utils.Mat4Identity;
+        });
+    }
+
+    export function runProgram() {
+        // Firstly we want to fix up the viewport and perspective every the screen is resized
+        window.addEventListener("resize", onWindowResize, false);
+        // And then run the handler initially
+        onWindowResize();
+        // Clear the colour, enable depth testing and culling
+        gl.clearColor(0.1, 0.2, 0.3, 1);
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.CULL_FACE);
+        // Initialise the data to be put in the buffers
+        for (let cubie of cube.cubies) {
+            const [verts, indices] = getCubieVertData(cubie);
+            vertData.concat(verts);
+            indexData.concat(indices.map(i => i + vertData.length));
+        }
+        // Initialise the vertex buffer, which contains position and colour data
+        vertBuffer = gl.createBuffer() as WebGLBuffer;
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertData), gl.STATIC_DRAW);
+        // Initialise the index buffer, which contains the offsets for each vertex in the vertex buffer
+        indexBuffer = gl.createBuffer() as WebGLBuffer;
+        gl.bindBuffer(gl.ARRAY_BUFFER, indexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+        // Set the animation loop callback
+        window.requestAnimationFrame(onAnimationLoop);
+    }
+
+    function onWindowResize(): void {
+        canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+        canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        pMat = Utils.getPerspectiveMatrix(Math.PI / 2, canvas.width / canvas.height, 0.1, 1024);
+    }
+
+    function onAnimationLoop() {
+        window.requestAnimationFrame(onAnimationLoop);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        render();
+    }
+
+    function render() {
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+        // Position Attribute
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+        gl.enableVertexAttribArray(0);
+        // Colour Attribute
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+        gl.enableVertexAttribArray(1);
+
+        for (let i = 0; i < cube.cubies.length; i++) {
+            // TODO: Load the uniform matrices
+            const numVertices = 24;
+            gl.drawElements(gl.TRIANGLES, numVertices, gl.UNSIGNED_SHORT, i * numVertices * 2);
+        }
+    }
+
+    function getCubieVertData(cubie: Rubik.Cubie): [number[], number[]] {
+        throw Error("Not Implemented");
+    }
+
+    function loadGLContext(canvas: HTMLCanvasElement): Promise<WebGLRenderingContext> {
+        return new Promise<WebGLRenderingContext>((resolve, reject) => {
+            const ctx = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            if (ctx !== null) {
+                resolve(ctx);
+            } else {
+                reject(new Error("WebGL not available"));
+            }
+        });
+    }
+
+    function loadFile(filePath: string): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        resolve(xhr.responseText);
+                    } else {
+                        reject(new Error(`Failed to load ${filePath}`));
+                    }
+                }
+            };
+            xhr.open("GET", filePath);
+            xhr.send();
+        });
+    }
+
+    function loadShaders(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string):
+        Promise<{ vertexShader: WebGLShader, fragmentShader: WebGLShader }> {
+        return Promise.all([
+            createShader(gl, vertexShader, gl.VERTEX_SHADER),
+            createShader(gl, fragmentShader, gl.FRAGMENT_SHADER)
+        ]).then(([vertexShader, fragmentShader]) => ({ vertexShader, fragmentShader }));
+    }
+
+    function createShader(gl: WebGLRenderingContext, source: string, type: number): Promise<WebGLShader> {
+        return new Promise<WebGLShader>((resolve, reject) => {
+            const shader = gl.createShader(type);
+            if (shader === null) {
+                reject(new Error("Unable to create WebGL Shader"));
+                return;
+            }
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS) as GLboolean;
+            if (success) {
+                resolve(shader)
+            } else {
+                const log = gl.getShaderInfoLog(shader);
+                gl.deleteShader(shader);
+                reject(log);
+            }
+        });
+    }
+
+    function createProgram(gl: WebGLRenderingContext, vertexShader: WebGLShader, fragmentShader: WebGLShader):
+        Promise<WebGLProgram> {
+        return new Promise<WebGLProgram>((resolve, reject) => {
+            const program = gl.createProgram();
+            if (program === null) {
+                reject(new Error("Unable to create WebGL Program"));
+                return;
+            }
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            const success = gl.getProgramParameter(program, gl.LINK_STATUS) as GLboolean;
+            if (success) {
+                resolve(program);
+            } else {
+                const log = gl.getProgramInfoLog(program);
+                gl.deleteProgram(program);
+                reject(log);
+            }
+        });
+    }
 }
+
+const inputs: Program.InputVars = {
+    canvasId: "glCanvas",
+    vertexShaderPath: "shaders/vertex-shader.glsl",
+    fragmentShaderPath: "shaders/fragment-shader.glsl"
+}
+
+Program.loadState(inputs).then(Program.runProgram).catch(console.log);
