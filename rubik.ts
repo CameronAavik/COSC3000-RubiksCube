@@ -35,7 +35,7 @@ namespace Utils {
         const mcos = 1 - cos;
         const sin = Math.sin(angle);
         return [
-            [cos + x * x * mcos, x * y * mcos - x * sin, x * z * mcos + y * sin, 0],
+            [cos + x * x * mcos, x * y * mcos - z * sin, x * z * mcos + y * sin, 0],
             [y * x * mcos + z * sin, cos + y * y * mcos, y * z * mcos - x * sin, 0],
             [z * x * mcos - y * sin, z * y * mcos + x * sin, cos + z * z * mcos, 0],
             [0, 0, 0, 1]
@@ -43,12 +43,12 @@ namespace Utils {
     }
 
     export function getPerspectiveMatrix(fov: number, aspect: number, near: number, far: number): Mat4<number> {
-        const f = 1 / Math.tan(fov) / 2;
+        const f = 1 / Math.tan(fov / 2);
         const nf = 1 / (near - far);
         return [
-            [f / aspect, 0, 0, 0], 
-            [0, f, 0, 0], 
-            [0, 0, (far + near) * nf, 2 * far * near * nf], 
+            [f / aspect, 0, 0, 0],
+            [0, f, 0, 0],
+            [0, 0, (far + near) * nf, 2 * far * near * nf],
             [0, 0, -1, 0]
         ];
     }
@@ -212,15 +212,15 @@ namespace Rubik {
 
     export function createGLCube(size: number): Cube {
         const data = createCubeData(size);
-        const cubies = data.cubies.map(getWebGLCubieFromCubie);
-        return { 
-            data, 
-            cubies, 
-            tMat: Utils.getTranslationMatrix([0, 0, -3]), 
+        const cubies = data.cubies.map(c => getWebGLCubieFromCubie(c, size));
+        return {
+            data,
+            cubies,
+            tMat: Utils.getTranslationMatrix([2, 2, 2]),
             rMat: Utils.mulMats(
-                Utils.getRotationMatrix([0, 1, 0], Math.PI/4),
-                Utils.getRotationMatrix([0, 0, 1], Math.PI/4)
-            ) 
+                Utils.getRotationMatrix([0, 1, 0], Math.PI / 4),
+                Utils.getRotationMatrix([0, 0, 1], Math.PI / 4)
+            )
         }
     }
 
@@ -248,8 +248,8 @@ namespace Rubik {
 
     function getGlPosFromCubiePos(cubieData: CubieData, size: number): Utils.Vec3<number> {
         const pos = cubieData.startPos;
-        const n = 1 / (size*2);
-        const mapPos = (x: number) => (x/(size+1) + n) - 0.5;
+        const n = 1 / (size * 2);
+        const mapPos = (x: number) => (x / (size + 1) + n) - 0.5;
         return pos.map(mapPos);
     }
 }
