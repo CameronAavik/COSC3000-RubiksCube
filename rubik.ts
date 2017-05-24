@@ -217,10 +217,7 @@ namespace Rubik {
             data,
             cubies,
             tMat: Utils.getTranslationMatrix([2, 2, 2]),
-            rMat: Utils.mulMats(
-                Utils.getRotationMatrix([0, 1, 0], Math.PI / 4),
-                Utils.getRotationMatrix([0, 0, 1], Math.PI / 4)
-            )
+            rMat: Utils.Mat4Identity
         }
     }
 
@@ -260,6 +257,8 @@ namespace Program {
         readonly vertexShaderPath: string,
         readonly fragmentShaderPath: string
     }
+
+    let counter = 0;
 
     let cube: Rubik.Cube;
     let gl: WebGLRenderingContext;
@@ -341,7 +340,10 @@ namespace Program {
 
         gl.uniformMatrix4fv(projectionMat, false, Utils.matToFloatArray(pMat));
         gl.uniformMatrix4fv(cubeTranslationMat, false, Utils.matToFloatArray(cube.tMat));
-        gl.uniformMatrix4fv(cubeRotationMat, false, Utils.matToFloatArray(cube.rMat));
+        counter += 1;
+        const rotToApply = Utils.mulMats(Utils.getRotationMatrix([0, 1, 0], counter * 0.01), Utils.getRotationMatrix([0, 0, 1], counter * 0.02))
+        const rotationMat = Utils.mulMats(cube.rMat, rotToApply);
+        gl.uniformMatrix4fv(cubeRotationMat, false, Utils.matToFloatArray(rotationMat));
 
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -368,8 +370,8 @@ namespace Program {
         const verts = [
             // LEFT
             -n, -n, n, ...colours[0],
-            -n, -n, -n, ...colours[0],
             -n, n, n, ...colours[0],
+            -n, -n, -n, ...colours[0],
             -n, n, -n, ...colours[0],
             // RIGHT
             n, -n, -n, ...colours[1],
@@ -378,8 +380,8 @@ namespace Program {
             n, n, n, ...colours[1],
             // DOWN
             n, -n, -n, ...colours[2],
-            -n, -n, -n, ...colours[2],
             n, -n, n, ...colours[2],
+            -n, -n, -n, ...colours[2],
             -n, -n, n, ...colours[2],
             // UP
             n, n, n, ...colours[3],
@@ -388,8 +390,8 @@ namespace Program {
             -n, n, -n, ...colours[3],
             // BACK
             -n, -n, -n, ...colours[4],
-            n, -n, -n, ...colours[4],
             -n, n, -n, ...colours[4],
+            n, -n, -n, ...colours[4],
             n, n, -n, ...colours[4],
             // FRONT
             n, -n, n, ...colours[5],
