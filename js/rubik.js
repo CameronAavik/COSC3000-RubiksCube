@@ -310,43 +310,43 @@ var Program;
         const n = 1 / (2 * cube.data.size);
         const verts = [
             // LEFT
-            -n, -n, n, ...colours[0],
-            -n, n, n, ...colours[0],
             -n, -n, -n, ...colours[0],
             -n, n, -n, ...colours[0],
+            -n, n, n, ...colours[0],
+            -n, -n, n, ...colours[0],
             // RIGHT
             n, -n, -n, ...colours[1],
-            n, -n, n, ...colours[1],
             n, n, -n, ...colours[1],
             n, n, n, ...colours[1],
+            n, -n, n, ...colours[1],
             // DOWN
+            -n, -n, -n, ...colours[2],
             n, -n, -n, ...colours[2],
             n, -n, n, ...colours[2],
-            -n, -n, -n, ...colours[2],
             -n, -n, n, ...colours[2],
             // UP
+            -n, n, -n, ...colours[3],
+            n, n, -n, ...colours[3],
             n, n, n, ...colours[3],
             -n, n, n, ...colours[3],
-            n, n, -n, ...colours[3],
-            -n, n, -n, ...colours[3],
             // BACK
             -n, -n, -n, ...colours[4],
-            -n, n, -n, ...colours[4],
             n, -n, -n, ...colours[4],
             n, n, -n, ...colours[4],
+            -n, n, -n, ...colours[4],
             // FRONT
-            n, -n, n, ...colours[5],
             -n, -n, n, ...colours[5],
+            n, -n, n, ...colours[5],
             n, n, n, ...colours[5],
             -n, n, n, ...colours[5]
         ];
         const indexes = [
-            0, 1, 2, 2, 1, 3,
-            4, 5, 6, 6, 5, 7,
-            8, 9, 10, 10, 9, 11,
-            12, 13, 14, 14, 13, 15,
-            16, 17, 18, 18, 17, 19,
-            20, 21, 22, 22, 21, 23 // F
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 0),
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 4),
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 8),
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 12),
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 16),
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 20) // F
         ];
         return [verts, indexes];
     }
