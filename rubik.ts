@@ -291,8 +291,8 @@ namespace Program {
         // Initialise the data to be put in the buffers
         for (let cubie of cube.cubies) {
             const [verts, indices] = getCubieVertData(cubie);
-            vertData.concat(verts);
-            indexData.concat(indices.map(i => i + vertData.length));
+            vertData = vertData.concat(verts);
+            indexData = indexData.concat(indices.map(i => i + vertData.length));
         }
         // Initialise the vertex buffer, which contains position and colour data
         vertBuffer = gl.createBuffer() as WebGLBuffer;
@@ -300,8 +300,8 @@ namespace Program {
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertData), gl.STATIC_DRAW);
         // Initialise the index buffer, which contains the offsets for each vertex in the vertex buffer
         indexBuffer = gl.createBuffer() as WebGLBuffer;
-        gl.bindBuffer(gl.ARRAY_BUFFER, indexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
         // Set the animation loop callback
         window.requestAnimationFrame(onAnimationLoop);
     }
@@ -345,7 +345,7 @@ namespace Program {
             const cubie = cube.cubies[i];
             gl.uniformMatrix4fv(cubieTranslationMat, false, Utils.MatToFloatArray(cubie.tMat));
             gl.uniformMatrix4fv(cubieRotationMat, false, Utils.MatToFloatArray(cubie.rMat));
-            const numVertices = 24;
+            const numVertices = 36;
             gl.drawElements(gl.TRIANGLES, numVertices, gl.UNSIGNED_SHORT, i * numVertices * 2);
         }
     }
@@ -465,6 +465,7 @@ namespace Program {
             gl.linkProgram(program);
             const success = gl.getProgramParameter(program, gl.LINK_STATUS) as GLboolean;
             if (success) {
+                gl.useProgram(program);
                 resolve(program);
             } else {
                 const log = gl.getProgramInfoLog(program);

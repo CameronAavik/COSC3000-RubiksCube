@@ -11,5 +11,5 @@ varying lowp vec3 vColour;
 
 void main() {
     gl_Position = projectionMat * cubeTranslationMat * cubeRotationMat * cubieTranslationMat * cubieRotationMat * vec4(aVertexPosition, 1.0);
-    vColour = aVertexColur;
+    vColour = aVertexColour;
 }
