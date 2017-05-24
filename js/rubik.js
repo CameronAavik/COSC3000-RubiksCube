@@ -25,7 +25,7 @@ var Utils;
     }
     Utils.matToFloatArray = matToFloatArray;
     function getTranslationMatrix([x, y, z]) {
-        return [[x, 0, 0, 0], [0, y, 0, 0], [0, 0, z, 0], [0, 0, 0, 1]];
+        return [[1, 0, 0, x], [0, 1, 0, y], [0, 0, 1, z], [0, 0, 0, 1]];
     }
     Utils.getTranslationMatrix = getTranslationMatrix;
     function getRotationMatrix([x, y, z], angle) {
@@ -176,7 +176,7 @@ var Rubik;
         return {
             data,
             cubies,
-            tMat: Utils.getTranslationMatrix([2, 2, 2]),
+            tMat: Utils.Mat4Identity,
             rMat: Utils.Mat4Identity
         };
     }
@@ -204,7 +204,7 @@ var Rubik;
     function getGlPosFromCubiePos(cubieData, size) {
         const pos = cubieData.startPos;
         const n = 1 / (size * 2);
-        const mapPos = (x) => (x / (size + 1) + n) - 0.5;
+        const mapPos = (x) => (x / size + n) - 0.5;
         return pos.map(mapPos);
     }
 })(Rubik || (Rubik = {}));
@@ -341,12 +341,12 @@ var Program;
             -n, n, n, ...colours[5]
         ];
         const indexes = [
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 0),
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 4),
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 8),
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 12),
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 16),
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 20) // F
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 0),
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 4),
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 8),
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 12),
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 16),
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 20) // F
         ];
         return [verts, indexes];
     }

@@ -27,7 +27,7 @@ namespace Utils {
     }
 
     export function getTranslationMatrix([x, y, z]: Vec3<number>): Mat4<number> {
-        return [[x, 0, 0, 0], [0, y, 0, 0], [0, 0, z, 0], [0, 0, 0, 1]];
+        return [[1, 0, 0, x], [0, 1, 0, y], [0, 0, 1, z], [0, 0, 0, 1]];
     }
 
     export function getRotationMatrix([x, y, z]: Vec3<number>, angle: number): Mat4<number> {
@@ -216,7 +216,7 @@ namespace Rubik {
         return {
             data,
             cubies,
-            tMat: Utils.getTranslationMatrix([2, 2, 2]),
+            tMat: Utils.Mat4Identity,
             rMat: Utils.Mat4Identity
         }
     }
@@ -246,7 +246,7 @@ namespace Rubik {
     function getGlPosFromCubiePos(cubieData: CubieData, size: number): Utils.Vec3<number> {
         const pos = cubieData.startPos;
         const n = 1 / (size * 2);
-        const mapPos = (x: number) => (x / (size + 1) + n) - 0.5;
+        const mapPos = (x: number) => (x / size + n) - 0.5;
         return pos.map(mapPos);
     }
 }
@@ -400,12 +400,12 @@ namespace Program {
             -n, n, n, ...colours[5]
         ];
         const indexes = [
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 0), // L
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 4), // R
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 8), // D
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 12), // U
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 16), // B
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 20) // F
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 0), // L
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 4), // R
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 8), // D
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 12), // U
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 16), // B
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 20) // F
         ];
         return [verts, indexes];
     }
