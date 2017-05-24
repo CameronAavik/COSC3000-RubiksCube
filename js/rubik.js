@@ -1,4 +1,55 @@
 "use strict";
+var Utils;
+(function (Utils) {
+    const indexes = [0, 1, 2, 3];
+    Utils.Mat4Identity = indexes.map(i => indexes.map(j => i === j ? 1 : 0));
+    function mulMats(a, b) {
+        return indexes.map(i => indexes.map(j => indexes.map(k => a[i][k] * b[k][j]).reduce(sum, 0)));
+    }
+    Utils.mulMats = mulMats;
+    function mulMatVec(a, b) {
+        return indexes.map(i => indexes.map(j => a[i][j] * b[j]).reduce(sum, 0));
+    }
+    Utils.mulMatVec = mulMatVec;
+    function VecToFloatArray(vec) {
+        return new Float32Array(vec);
+    }
+    Utils.VecToFloatArray = VecToFloatArray;
+    function MatToFloatArray(mat) {
+        return new Float32Array([
+            mat[0][0], mat[0][1], mat[0][2], mat[0][3],
+            mat[1][0], mat[1][1], mat[1][2], mat[1][3],
+            mat[2][0], mat[2][1], mat[2][2], mat[2][3],
+            mat[3][0], mat[3][1], mat[3][2], mat[3][3],
+        ]);
+    }
+    Utils.MatToFloatArray = MatToFloatArray;
+    function getTranslationMatrix([x, y, z]) {
+        return [[x, 0, 0, 0], [0, y, 0, 0], [0, 0, z, 0], [0, 0, 0, 1]];
+    }
+    Utils.getTranslationMatrix = getTranslationMatrix;
+    function getRotationMatrix([x, y, z], angle) {
+        const cos = Math.cos(angle);
+        const mcos = 1 - cos;
+        const sin = Math.sin(angle);
+        return [
+            [cos + x * x * mcos, x * y * mcos - x * sin, x * z * mcos + y * sin, 0],
+            [y * x * mcos + z * sin, cos + y * y * mcos, y * z * mcos - x * sin, 0],
+            [z * x * mcos - y * sin, z * y * mcos + x * sin, cos + z * z * mcos, 0],
+            [0, 0, 0, 1]
+        ];
+    }
+    Utils.getRotationMatrix = getRotationMatrix;
+    function getPerspectiveMatrix(fov, aspect, near, far) {
+        const f = 1 / Math.tan(fov) / 2;
+        const nf = 1 / (near - far);
+        return [[f / aspect, 0, 0, 0], [0, f, 0, 0], [0, 0, (far + near) * nf, -1], [0, 0, 2 * far * near * nf, 0]];
+    }
+    Utils.getPerspectiveMatrix = getPerspectiveMatrix;
+    // Helper function for generation the interval [0, max)
+    Utils.range = (max) => Array.from({ length: max }, (_, k) => k);
+    const sum = (a, b) => a + b;
+})(Utils || (Utils = {}));
 var Rubik;
 (function (Rubik) {
     /**
@@ -92,10 +143,37 @@ var Rubik;
         }
         return rotMap;
     }
+    Rubik.colours = {
+        white: [1, 1, 1],
+        blue: [0, 0x51 / 0xFF, 0xBA / 0xFF],
+        yellow: [1, 0xD5 / 0xFF, 0],
+        green: [0, 0x9E / 0xFF, 0x60 / 0xFF],
+        red: [0xC4 / 0xFF, 0x1E / 0xFF, 0x3A / 0xFF],
+        orange: [1, 0x58 / 0xFF, 0],
+        none: [0, 0, 0]
+    };
+    function getCubieFaceColours(cubie, size) {
+        const pos = cubie.data.startPos;
+        const n = size - 1;
+        return [
+            pos[0] === 0 ? Rubik.colours.blue : Rubik.colours.none,
+            pos[0] === n ? Rubik.colours.green : Rubik.colours.none,
+            pos[1] === 0 ? Rubik.colours.orange : Rubik.colours.none,
+            pos[1] === n ? Rubik.colours.red : Rubik.colours.none,
+            pos[2] === 0 ? Rubik.colours.yellow : Rubik.colours.none,
+            pos[2] === n ? Rubik.colours.white : Rubik.colours.none,
+        ];
+    }
+    Rubik.getCubieFaceColours = getCubieFaceColours;
     function createGLCube(size) {
         const data = createCubeData(size);
         const cubies = data.cubies.map(getWebGLCubieFromCubie);
-        return { data, cubies, tMat: Utils.Mat4Identity, rMat: Utils.Mat4Identity };
+        return {
+            data,
+            cubies,
+            tMat: Utils.getTranslationMatrix([0, 0, 1]),
+            rMat: Utils.mulMats(Utils.getRotationMatrix([0, 1, 0], Math.PI / 4), Utils.getRotationMatrix([0, 0, 1], Math.PI / 4))
+        };
     }
     Rubik.createGLCube = createGLCube;
     function applyMove(cube, move, rotations) {
@@ -119,57 +197,6 @@ var Rubik;
         };
     }
 })(Rubik || (Rubik = {}));
-var Utils;
-(function (Utils) {
-    const indexes = [0, 1, 2, 3];
-    Utils.Mat4Identity = indexes.map(i => indexes.map(j => i === j ? 1 : 0));
-    function mulMats(a, b) {
-        return indexes.map(i => indexes.map(j => indexes.map(k => a[i][k] * b[k][j]).reduce(sum, 0)));
-    }
-    Utils.mulMats = mulMats;
-    function mulMatVec(a, b) {
-        return indexes.map(i => indexes.map(j => a[i][j] * b[j]).reduce(sum, 0));
-    }
-    Utils.mulMatVec = mulMatVec;
-    function VecToFloatArray(vec) {
-        return new Float32Array(vec);
-    }
-    Utils.VecToFloatArray = VecToFloatArray;
-    function MatToFloatArray(mat) {
-        return new Float32Array([
-            mat[0][0], mat[0][1], mat[0][2], mat[0][3],
-            mat[1][0], mat[1][1], mat[1][2], mat[1][3],
-            mat[2][0], mat[2][1], mat[2][2], mat[2][3],
-            mat[3][0], mat[3][1], mat[3][2], mat[3][3],
-        ]);
-    }
-    Utils.MatToFloatArray = MatToFloatArray;
-    function getTranslationMatrix([x, y, z]) {
-        return [[x, 0, 0, 0], [0, y, 0, 0], [0, 0, z, 0], [0, 0, 0, 1]];
-    }
-    Utils.getTranslationMatrix = getTranslationMatrix;
-    function getRotationMatrix([x, y, z], angle) {
-        const cos = Math.cos(angle);
-        const mcos = 1 - cos;
-        const sin = Math.sin(angle);
-        return [
-            [cos + x * x * mcos, x * y * mcos - x * sin, x * z * mcos + y * sin, 0],
-            [y * x * mcos + z * sin, cos + y * y * mcos, y * z * mcos - x * sin, 0],
-            [z * x * mcos - y * sin, z * y * mcos + x * sin, cos + z * z * mcos, 0],
-            [0, 0, 0, 1]
-        ];
-    }
-    Utils.getRotationMatrix = getRotationMatrix;
-    function getPerspectiveMatrix(fov, aspect, near, far) {
-        const f = 1 / Math.tan(fov) / 2;
-        const nf = 1 / (near - far);
-        return [[f / aspect, 0, 0, 0], [0, f, 0, 0], [0, 0, (far + near) * nf, -1], [0, 0, 2 * far * near * nf, 0]];
-    }
-    Utils.getPerspectiveMatrix = getPerspectiveMatrix;
-    // Helper function for generation the interval [0, max)
-    Utils.range = (max) => Array.from({ length: max }, (_, k) => k);
-    const sum = (a, b) => a + b;
-})(Utils || (Utils = {}));
 var Program;
 (function (Program) {
     let cube;
@@ -238,6 +265,15 @@ var Program;
         render();
     }
     function render() {
+        // Set the uniform matrices which are all in common
+        const projectionMat = gl.getUniformLocation(glProg, "projectionMat");
+        const cubeTranslationMat = gl.getUniformLocation(glProg, "cubeTranslationMat");
+        const cubeRotationMat = gl.getUniformLocation(glProg, "cubeRotationMat");
+        const cubieTranslationMat = gl.getUniformLocation(glProg, "cubieTranslationMat");
+        const cubieRotationMat = gl.getUniformLocation(glProg, "cubieRotationMat");
+        gl.uniformMatrix4fv(projectionMat, false, Utils.MatToFloatArray(pMat));
+        gl.uniformMatrix4fv(cubeTranslationMat, false, Utils.MatToFloatArray(cube.tMat));
+        gl.uniformMatrix4fv(cubeRotationMat, false, Utils.MatToFloatArray(cube.rMat));
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         // Position Attribute
@@ -247,13 +283,57 @@ var Program;
         gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
         gl.enableVertexAttribArray(1);
         for (let i = 0; i < cube.cubies.length; i++) {
-            // TODO: Load the uniform matrices
+            const cubie = cube.cubies[i];
+            gl.uniformMatrix4fv(cubieTranslationMat, false, Utils.MatToFloatArray(cubie.tMat));
+            gl.uniformMatrix4fv(cubieRotationMat, false, Utils.MatToFloatArray(cubie.rMat));
             const numVertices = 24;
             gl.drawElements(gl.TRIANGLES, numVertices, gl.UNSIGNED_SHORT, i * numVertices * 2);
         }
     }
     function getCubieVertData(cubie) {
-        throw Error("Not Implemented");
+        const colours = Rubik.getCubieFaceColours(cubie, cube.data.size);
+        const n = 1 / (2 * cube.data.size);
+        const verts = [
+            // LEFT
+            -n, -n, n, ...colours[0],
+            -n, -n, -n, ...colours[0],
+            -n, n, n, ...colours[0],
+            -n, n, -n, ...colours[0],
+            // RIGHT
+            n, -n, -n, ...colours[1],
+            n, -n, n, ...colours[1],
+            n, n, -n, ...colours[1],
+            n, n, n, ...colours[1],
+            // DOWN
+            n, -n, -n, ...colours[2],
+            -n, -n, -n, ...colours[2],
+            n, -n, n, ...colours[2],
+            -n, -n, n, ...colours[2],
+            // UP
+            n, n, n, ...colours[3],
+            -n, n, n, ...colours[3],
+            n, n, -n, ...colours[3],
+            -n, n, -n, ...colours[3],
+            // BACK
+            -n, -n, -n, ...colours[4],
+            n, -n, -n, ...colours[4],
+            -n, n, -n, ...colours[4],
+            n, n, -n, ...colours[4],
+            // FRONT
+            n, -n, n, ...colours[5],
+            -n, -n, n, ...colours[5],
+            n, n, n, ...colours[5],
+            -n, n, n, ...colours[5],
+        ];
+        const indexes = [
+            0, 1, 2, 2, 1, 3,
+            4, 5, 6, 6, 5, 3,
+            8, 9, 10, 10, 9, 3,
+            12, 13, 14, 14, 13, 3,
+            16, 17, 18, 18, 17, 3,
+            20, 21, 22, 22, 21, 3,
+        ];
+        return [verts, indexes];
     }
     function loadGLContext(canvas) {
         return new Promise((resolve, reject) => {
