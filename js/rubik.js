@@ -11,19 +11,19 @@ var Utils;
         return indexes.map(i => indexes.map(j => a[i][j] * b[j]).reduce(sum, 0));
     }
     Utils.mulMatVec = mulMatVec;
-    function VecToFloatArray(vec) {
+    function vecToFloatArray(vec) {
         return new Float32Array(vec);
     }
-    Utils.VecToFloatArray = VecToFloatArray;
-    function MatToFloatArray(mat) {
+    Utils.vecToFloatArray = vecToFloatArray;
+    function matToFloatArray(mat) {
         return new Float32Array([
-            mat[0][0], mat[0][1], mat[0][2], mat[0][3],
-            mat[1][0], mat[1][1], mat[1][2], mat[1][3],
-            mat[2][0], mat[2][1], mat[2][2], mat[2][3],
-            mat[3][0], mat[3][1], mat[3][2], mat[3][3],
+            mat[0][0], mat[1][0], mat[2][0], mat[3][0],
+            mat[0][1], mat[1][1], mat[2][1], mat[3][1],
+            mat[0][2], mat[1][2], mat[2][2], mat[3][2],
+            mat[0][3], mat[1][3], mat[2][3], mat[3][3]
         ]);
     }
-    Utils.MatToFloatArray = MatToFloatArray;
+    Utils.matToFloatArray = matToFloatArray;
     function getTranslationMatrix([x, y, z]) {
         return [[x, 0, 0, 0], [0, y, 0, 0], [0, 0, z, 0], [0, 0, 0, 1]];
     }
@@ -43,7 +43,12 @@ var Utils;
     function getPerspectiveMatrix(fov, aspect, near, far) {
         const f = 1 / Math.tan(fov) / 2;
         const nf = 1 / (near - far);
-        return [[f / aspect, 0, 0, 0], [0, f, 0, 0], [0, 0, (far + near) * nf, -1], [0, 0, 2 * far * near * nf, 0]];
+        return [
+            [f / aspect, 0, 0, 0],
+            [0, f, 0, 0],
+            [0, 0, (far + near) * nf, 2 * far * near * nf],
+            [0, 0, -1, 0]
+        ];
     }
     Utils.getPerspectiveMatrix = getPerspectiveMatrix;
     // Helper function for generation the interval [0, max)
@@ -171,7 +176,7 @@ var Rubik;
         return {
             data,
             cubies,
-            tMat: Utils.getTranslationMatrix([0, 0, 1]),
+            tMat: Utils.getTranslationMatrix([0, 0, -3]),
             rMat: Utils.mulMats(Utils.getRotationMatrix([0, 1, 0], Math.PI / 4), Utils.getRotationMatrix([0, 0, 1], Math.PI / 4))
         };
     }
@@ -185,16 +190,22 @@ var Rubik;
         Utils.range(rotationCount).forEach(_ => {
             newCube = rotateLayer(newCube, { axis, layerNum });
         });
-        const newWebGLCubies = newCube.cubies.map(getWebGLCubieFromCubie);
+        const newWebGLCubies = newCube.cubies.map(c => getWebGLCubieFromCubie(c, cube.data.size));
         return { data: newCube, cubies: newWebGLCubies, tMat: cube.tMat, rMat: cube.rMat };
     }
     Rubik.applyMove = applyMove;
-    function getWebGLCubieFromCubie(cubieData) {
+    function getWebGLCubieFromCubie(cubieData, size) {
         return {
             data: cubieData,
-            tMat: Utils.getTranslationMatrix(cubieData.startPos),
+            tMat: Utils.getTranslationMatrix(getGlPosFromCubiePos(cubieData, size)),
             rMat: getRotMatrixFromFaceMap(cubieData.faces)
         };
+    }
+    function getGlPosFromCubiePos(cubieData, size) {
+        const pos = cubieData.startPos;
+        const n = 1 / (size * 2);
+        const mapPos = (x) => (x / (size + 1) + n) - 0.5;
+        return pos.map(mapPos);
     }
 })(Rubik || (Rubik = {}));
 var Program;
@@ -271,9 +282,9 @@ var Program;
         const cubeRotationMat = gl.getUniformLocation(glProg, "cubeRotationMat");
         const cubieTranslationMat = gl.getUniformLocation(glProg, "cubieTranslationMat");
         const cubieRotationMat = gl.getUniformLocation(glProg, "cubieRotationMat");
-        gl.uniformMatrix4fv(projectionMat, false, Utils.MatToFloatArray(pMat));
-        gl.uniformMatrix4fv(cubeTranslationMat, false, Utils.MatToFloatArray(cube.tMat));
-        gl.uniformMatrix4fv(cubeRotationMat, false, Utils.MatToFloatArray(cube.rMat));
+        gl.uniformMatrix4fv(projectionMat, false, Utils.matToFloatArray(pMat));
+        gl.uniformMatrix4fv(cubeTranslationMat, false, Utils.matToFloatArray(cube.tMat));
+        gl.uniformMatrix4fv(cubeRotationMat, false, Utils.matToFloatArray(cube.rMat));
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         // Position Attribute
@@ -284,8 +295,8 @@ var Program;
         gl.enableVertexAttribArray(1);
         for (let i = 0; i < cube.cubies.length; i++) {
             const cubie = cube.cubies[i];
-            gl.uniformMatrix4fv(cubieTranslationMat, false, Utils.MatToFloatArray(cubie.tMat));
-            gl.uniformMatrix4fv(cubieRotationMat, false, Utils.MatToFloatArray(cubie.rMat));
+            gl.uniformMatrix4fv(cubieTranslationMat, false, Utils.matToFloatArray(cubie.tMat));
+            gl.uniformMatrix4fv(cubieRotationMat, false, Utils.matToFloatArray(cubie.rMat));
             const numIndices = 36;
             gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_SHORT, i * numIndices * 2);
         }
