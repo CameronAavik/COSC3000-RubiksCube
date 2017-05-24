@@ -238,8 +238,8 @@ var Program;
         // Initialise the data to be put in the buffers
         for (let cubie of cube.cubies) {
             const [verts, indices] = getCubieVertData(cubie);
+            indexData = indexData.concat(indices.map(i => i + vertData.length / 6));
             vertData = vertData.concat(verts);
-            indexData = indexData.concat(indices.map(i => i + vertData.length));
         }
         // Initialise the vertex buffer, which contains position and colour data
         vertBuffer = gl.createBuffer();
@@ -286,8 +286,8 @@ var Program;
             const cubie = cube.cubies[i];
             gl.uniformMatrix4fv(cubieTranslationMat, false, Utils.MatToFloatArray(cubie.tMat));
             gl.uniformMatrix4fv(cubieRotationMat, false, Utils.MatToFloatArray(cubie.rMat));
-            const numVertices = 36;
-            gl.drawElements(gl.TRIANGLES, numVertices, gl.UNSIGNED_SHORT, i * numVertices * 2);
+            const numIndices = 36;
+            gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_SHORT, i * numIndices * 2);
         }
     }
     function getCubieVertData(cubie) {
@@ -323,7 +323,7 @@ var Program;
             n, -n, n, ...colours[5],
             -n, -n, n, ...colours[5],
             n, n, n, ...colours[5],
-            -n, n, n, ...colours[5],
+            -n, n, n, ...colours[5]
         ];
         const indexes = [
             0, 1, 2, 2, 1, 3,
@@ -331,7 +331,7 @@ var Program;
             8, 9, 10, 10, 9, 11,
             12, 13, 14, 14, 13, 15,
             16, 17, 18, 18, 17, 19,
-            20, 21, 22, 22, 21, 23,
+            20, 21, 22, 22, 21, 23 // F
         ];
         return [verts, indexes];
     }
