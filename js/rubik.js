@@ -41,12 +41,12 @@ var Utils;
     }
     Utils.getRotationMatrix = getRotationMatrix;
     function getPerspectiveMatrix(fov, aspect, near, far) {
-        const f = 1 / Math.tan(fov / 2);
-        const nf = 1 / (near - far);
+        const f = Math.tan(Math.PI * 0.5 - 0.5 * fov);
+        const rangeInv = 1 / (near - far);
         return [
             [f / aspect, 0, 0, 0],
             [0, f, 0, 0],
-            [0, 0, (far + near) * nf, 2 * far * near * nf],
+            [0, 0, (far + near) * rangeInv, 2 * far * near * rangeInv],
             [0, 0, -1, 0]
         ];
     }
@@ -176,7 +176,7 @@ var Rubik;
         return {
             data,
             cubies,
-            tMat: Utils.Mat4Identity,
+            tMat: Utils.getTranslationMatrix([0, 0, -2]),
             rMat: Utils.Mat4Identity
         };
     }
@@ -341,12 +341,12 @@ var Program;
             -n, n, n, ...colours[5]
         ];
         const indexes = [
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 0),
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 4),
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 8),
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 12),
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 16),
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 20) // F
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 0),
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 4),
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 8),
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 12),
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 16),
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 20) // F
         ];
         return [verts, indexes];
     }

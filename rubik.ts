@@ -43,12 +43,12 @@ namespace Utils {
     }
 
     export function getPerspectiveMatrix(fov: number, aspect: number, near: number, far: number): Mat4<number> {
-        const f = 1 / Math.tan(fov / 2);
-        const nf = 1 / (near - far);
+        const f = Math.tan(Math.PI * 0.5 - 0.5 * fov);
+        const rangeInv = 1 / (near - far);
         return [
             [f / aspect, 0, 0, 0],
             [0, f, 0, 0],
-            [0, 0, (far + near) * nf, 2 * far * near * nf],
+            [0, 0, (far + near) * rangeInv, 2 * far * near * rangeInv],
             [0, 0, -1, 0]
         ];
     }
@@ -216,7 +216,7 @@ namespace Rubik {
         return {
             data,
             cubies,
-            tMat: Utils.Mat4Identity,
+            tMat: Utils.getTranslationMatrix([0, 0, -2]),
             rMat: Utils.Mat4Identity
         }
     }
@@ -400,12 +400,12 @@ namespace Program {
             -n, n, n, ...colours[5]
         ];
         const indexes = [
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 0), // L
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 4), // R
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 8), // D
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 12), // U
-            ...[0, 1, 2, 0, 2, 3].map(i => i + 16), // B
-            ...[0, 2, 1, 0, 3, 2].map(i => i + 20) // F
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 0), // L
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 4), // R
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 8), // D
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 12), // U
+            ...[0, 2, 1, 0, 3, 2].map(i => i + 16), // B
+            ...[0, 1, 2, 0, 2, 3].map(i => i + 20) // F
         ];
         return [verts, indexes];
     }
