@@ -63,10 +63,12 @@ var Rubik;
      */
     function createCubeData(size) {
         const cubies = [];
+        let count = 0;
         Utils.range(size).forEach(z => {
             Utils.range(size).forEach(y => {
                 Utils.range(size).forEach(x => {
-                    cubies.push({ startPos: [x, y, z], faces: [0, 1, 2, 3, 4, 5] });
+                    cubies.push({ startPos: [x, y, z], faces: [0, 1, 2, 3, 4, 5], index: count });
+                    count += 1;
                 });
             });
         });
@@ -80,13 +82,13 @@ var Rubik;
     function rotateLayer(cube, rotationLayer) {
         const getCubie = (i, j) => getCubieIndex(cube.size, i, j, rotationLayer);
         const cubies = cube.cubies.slice(); // Create a copy of the cube
-        Utils.range(cube.size).forEach(i => {
-            Utils.range(cube.size).forEach(j => {
+        for (let i = 0; i < cube.size; i++) {
+            for (let j = 0; j < cube.size; j++) {
                 const oldCubie = cube.cubies[getCubie(cube.size - j - 1, i)];
                 const newFaceMap = getFacesAfterRotation(oldCubie.faces, rotationLayer.axis);
-                cubies[getCubie(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap };
-            });
-        });
+                cubies[getCubie(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap, index: oldCubie.index };
+            }
+        }
         return { cubies, size: cube.size };
     }
     /**
@@ -98,16 +100,16 @@ var Rubik;
         let cycle;
         switch (axis) {
             case 0:
-                cycle = [0, 1, 4, 5, 2, 3];
+                cycle = [0, 1, 5, 4, 2, 3];
                 break;
             case 1:
-                cycle = [5, 4, 2, 3, 0, 1];
+                cycle = [4, 5, 2, 3, 1, 0];
                 break;
             case 2:
-                cycle = [2, 3, 1, 0, 4, 5];
+                cycle = [3, 2, 0, 1, 4, 5];
                 break;
         }
-        return faces.map(f => faces[cycle[f]]);
+        return faces.map(f => cycle[f]);
     }
     /**
      * Will return the index into the cubies array belonging to the (i, j)th cubie in the layer
@@ -137,12 +139,12 @@ var Rubik;
             let mat = Utils.Mat4Identity;
             let faceMap = [0, 1, 2, 3, 4, 5];
             for (let turn of startPerm) {
-                mat = Utils.mulMats(mat, rots[turn]);
+                mat = Utils.mulMats(rots[turn], mat);
                 faceMap = getFacesAfterRotation(faceMap, turn);
             }
             for (let i = 0; i < 4; i++) {
                 rotMap.set(JSON.stringify(faceMap), mat);
-                mat = Utils.mulMats(mat, rots[0]);
+                mat = Utils.mulMats(rots[0], mat);
                 faceMap = getFacesAfterRotation(faceMap, 0);
             }
         }
@@ -173,9 +175,14 @@ var Rubik;
     function createGLCube(size) {
         const data = createCubeData(size);
         const cubies = data.cubies.map(c => getWebGLCubieFromCubie(c, size));
+        let cubieMap = [];
+        cubies.forEach((c, i) => {
+            cubieMap[c.data.index] = i;
+        });
         return {
             data,
             cubies,
+            cubieMap,
             tMat: Utils.getTranslationMatrix([0, 0, -2]),
             rMat: Utils.Mat4Identity
         };
@@ -185,13 +192,17 @@ var Rubik;
         const axis = (move === "L" || move === "R") ? 0 : (move === "D" || move === "U") ? 1 : 2;
         const isOpposite = move === "R" || move === "U" || move === "F";
         const layerNum = isOpposite ? cube.data.size - 1 : 0;
-        const rotationCount = isOpposite ? (4 - (rotations % 4)) : rotations % 4;
+        const rotationCount = isOpposite ? (4 - (rotations % 4)) % 4 : rotations % 4;
         let newCube = cube.data;
-        Utils.range(rotationCount).forEach(_ => {
+        for (let i = 0; i < rotationCount; i++) {
             newCube = rotateLayer(newCube, { axis, layerNum });
-        });
+        }
         const newWebGLCubies = newCube.cubies.map(c => getWebGLCubieFromCubie(c, cube.data.size));
-        return { data: newCube, cubies: newWebGLCubies, tMat: cube.tMat, rMat: cube.rMat };
+        let cubieMap = [];
+        newWebGLCubies.forEach((c, i) => {
+            cubieMap[c.data.index] = i;
+        });
+        return { data: newCube, cubies: newWebGLCubies, cubieMap, tMat: cube.tMat, rMat: cube.rMat };
     }
     Rubik.applyMove = applyMove;
     function getWebGLCubieFromCubie(cubieData, size) {
@@ -279,16 +290,12 @@ var Program;
     function render() {
         // Set the uniform matrices which are all in common
         const projectionMat = gl.getUniformLocation(glProg, "projectionMat");
-        const cubeTranslationMat = gl.getUniformLocation(glProg, "cubeTranslationMat");
-        const cubeRotationMat = gl.getUniformLocation(glProg, "cubeRotationMat");
-        const cubieTranslationMat = gl.getUniformLocation(glProg, "cubieTranslationMat");
-        const cubieRotationMat = gl.getUniformLocation(glProg, "cubieRotationMat");
         gl.uniformMatrix4fv(projectionMat, false, Utils.matToFloatArray(pMat));
-        gl.uniformMatrix4fv(cubeTranslationMat, false, Utils.matToFloatArray(cube.tMat));
+        const modelMat = gl.getUniformLocation(glProg, "modelMat");
         counter += 1;
         const rotToApply = Utils.mulMats(Utils.getRotationMatrix([0, 1, 0], counter * 0.01), Utils.getRotationMatrix([0, 0, 1], counter * 0.02));
         const rotationMat = Utils.mulMats(cube.rMat, rotToApply);
-        gl.uniformMatrix4fv(cubeRotationMat, false, Utils.matToFloatArray(rotationMat));
+        const cubeMat = Utils.mulMats(cube.tMat, rotationMat);
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         // Position Attribute
@@ -298,11 +305,17 @@ var Program;
         gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
         gl.enableVertexAttribArray(1);
         for (let i = 0; i < cube.cubies.length; i++) {
-            const cubie = cube.cubies[i];
-            gl.uniformMatrix4fv(cubieTranslationMat, false, Utils.matToFloatArray(cubie.tMat));
-            gl.uniformMatrix4fv(cubieRotationMat, false, Utils.matToFloatArray(cubie.rMat));
+            const cubie = cube.cubies[cube.cubieMap[i]];
+            const cubieMat = Utils.mulMats(cubie.rMat, cubie.tMat);
+            gl.uniformMatrix4fv(modelMat, false, Utils.matToFloatArray(Utils.mulMats(cubeMat, cubieMat)));
             const numIndices = 36;
             gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_SHORT, i * numIndices * 2);
+        }
+        if (counter % 200 === 0) {
+            const index = Math.floor(Math.random() * 6);
+            const move = "LRDUBF"[index];
+            console.log(move);
+            cube = Rubik.applyMove(cube, move, 1);
         }
     }
     function getCubieVertData(cubie) {
