@@ -142,9 +142,14 @@ namespace Rubik {
      * @param layer The layer information
      */
     function getCubieIndex(cubeSize: number, i: number, j: number, layer: Layer): number {
-        const pos = [i, j];
-        pos.splice(layer.axis, 0, layer.layerNum);
-        return pos[0] + cubeSize * pos[1] + (cubeSize ** 2) * pos[2]
+        let pos: number[];
+        switch(layer.axis) {
+            case 0: pos = [layer.layerNum, j, i]; break;
+            case 1: pos = [i, layer.layerNum, j]; break;
+            case 2: pos = [i, j, layer.layerNum]; break;
+            default: throw Error("The axis should only be 0, 1, or 2");
+        }
+        return pos[0] + pos[1] * cubeSize + pos[2] * (cubeSize) ** 2
     }
 
     function getRotMatrixFromFaceMap(faces: FaceMap): Utils.Mat4<number> {
@@ -234,7 +239,8 @@ namespace Rubik {
         const axis: Axis = (move === "L" || move === "R") ? 0 : (move === "D" || move === "U") ? 1 : 2;
         const isOpposite = move === "R" || move === "U" || move === "F";
         const layerNum = isOpposite ? cube.data.size - 1 : 0;
-        const rotationCount = isOpposite ? (4 - (rotations % 4)) % 4 : rotations % 4;
+        const reverseRotations = (move === "R" || move === "U" || move === "B");
+        const rotationCount = reverseRotations ? (4 - (rotations % 4)) % 4 : rotations % 4;
         let newCube = cube.data;
         for (let i = 0; i < rotationCount; i++) {
             newCube = rotateLayer(newCube, { axis, layerNum });
@@ -336,7 +342,7 @@ namespace Program {
         pMat = Utils.getPerspectiveMatrix(Math.PI / 2, canvas.width / canvas.height, 0.1, 1024);
     }
 
-    function onAnimationLoop() {
+     function onAnimationLoop() {
         window.requestAnimationFrame(onAnimationLoop);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         render();
