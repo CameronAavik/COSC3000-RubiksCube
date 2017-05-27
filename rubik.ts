@@ -181,12 +181,21 @@ namespace Rubik {
         return rotMap;
     }
 
+    export type AnimationStatus = {
+        isActive: boolean,
+        rotMatrix: Utils.Mat4<number>,
+        angleTurn: number,
+        layer: Layer,
+        startTime: number
+    }
+
     export type Cube = {
         readonly data: CubeData,
         readonly cubies: Cubie[],
         readonly cubieMap: number[],
         readonly tMat: Utils.Mat4<number>,
-        readonly rMat: Utils.Mat4<number>
+        readonly rMat: Utils.Mat4<number>,
+        readonly animation: AnimationStatus
     }
 
     export type Cubie = {
@@ -230,27 +239,76 @@ namespace Rubik {
             cubies,
             cubieMap,
             tMat: Utils.getTranslationMatrix([0, 0, -2]),
-            rMat: Utils.Mat4Identity
+            rMat: Utils.Mat4Identity,
+            animation: {
+                isActive: false,
+                rotMatrix: Utils.Mat4Identity,
+                layer: {axis: 0, layerNum: 0},
+                angleTurn: 0,
+                startTime: 0
+            }
         }
     }
 
     export type Move = "L" | "R" | "D" | "U" | "B" | "F";
     export function applyMove(cube: Cube, move: Move, rotations: number): Cube {
+        if (cube.animation.isActive) {
+            console.log("Can't apply move while the animation is still active");
+            return cube;
+        }
         const axis: Axis = (move === "L" || move === "R") ? 0 : (move === "D" || move === "U") ? 1 : 2;
         const isOpposite = move === "R" || move === "U" || move === "F";
         const layerNum = isOpposite ? cube.data.size - 1 : 0;
-        const reverseRotations = (move === "R" || move === "U" || move === "B");
+        const reverseRotations = move === "R" || move === "U" || move === "B";
         const rotationCount = reverseRotations ? (4 - (rotations % 4)) % 4 : rotations % 4;
         let newCube = cube.data;
         for (let i = 0; i < rotationCount; i++) {
             newCube = rotateLayer(newCube, { axis, layerNum });
         }
-        const newWebGLCubies = newCube.cubies.map(c => getWebGLCubieFromCubie(c, cube.data.size));
-        let cubieMap : number[] = [];
-        newWebGLCubies.forEach((c, i) => {
-            cubieMap[c.data.index] = i;
-        })
-        return { data: newCube, cubies: newWebGLCubies, cubieMap, tMat: cube.tMat, rMat: cube.rMat }
+        const newAnimation: AnimationStatus = {
+            isActive: true,
+            rotMatrix: Utils.Mat4Identity,
+            layer: {axis, layerNum},
+            angleTurn: (isOpposite ? -1 : 1) * (rotations % 4) * Math.PI/2,
+            startTime: performance.now()
+        }
+
+        return { data: newCube, cubies: cube.cubies, cubieMap: cube.cubieMap, tMat: cube.tMat, rMat: cube.rMat, animation: newAnimation }
+    }
+
+    const timeToTurnRadian = 2/Math.PI * 1000; // it takes 1 second to turn 90 degrees
+
+    export function progressAnimation(cube: Cube, currentTime: number): Cube {
+        const anim = cube.animation;
+        if (anim.isActive) {
+            const rotationAxis: Utils.Vec3<number> = [0, 0, 0];
+            rotationAxis[anim.layer.axis] = 1;
+            const turnTime = Math.abs(anim.angleTurn * timeToTurnRadian);
+            const progress = (currentTime - anim.startTime)/turnTime;
+            if (progress >= 1) {
+                anim.isActive = false;
+                // Update all the cubies to their new rotation matrices as the animation is over
+                const newWebGLCubies = cube.data.cubies.map(c => getWebGLCubieFromCubie(c, cube.data.size));
+                let cubieMap : number[] = [];
+                newWebGLCubies.forEach((c, i) => {
+                    cubieMap[c.data.index] = i;
+                })
+                return { data: cube.data, cubies: newWebGLCubies, cubieMap: cubieMap, tMat: cube.tMat, rMat: cube.rMat, animation: anim }
+            }
+            anim.rotMatrix = Utils.getRotationMatrix(rotationAxis, anim.angleTurn * progress);
+        }
+        return cube;
+    }
+
+    export function cubieIsInLayer(index: number, layer: Layer, cubeSize: number) {
+        let posInAxis: number;
+        switch(layer.axis) {
+            case 0: posInAxis = index % cubeSize; break;
+            case 1: posInAxis = (index / cubeSize) % cubeSize; break;
+            case 2: posInAxis = (index / (cubeSize**2)) % cubeSize; break;
+            default: throw Error("The axis was not valid");
+        }
+        return Math.floor(posInAxis) == layer.layerNum;
     }
 
     function getWebGLCubieFromCubie(cubieData: CubieData, size: number): Cubie {
@@ -342,8 +400,9 @@ namespace Program {
         pMat = Utils.getPerspectiveMatrix(Math.PI / 2, canvas.width / canvas.height, 0.1, 1024);
     }
 
-     function onAnimationLoop() {
+     function onAnimationLoop(time: number) {
         window.requestAnimationFrame(onAnimationLoop);
+        cube = Rubik.progressAnimation(cube, time);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         render();
     }
@@ -355,7 +414,7 @@ namespace Program {
 
         const modelMat = gl.getUniformLocation(glProg, "modelMat") as WebGLUniformLocation;
         counter += 1;
-        const rotToApply = Utils.mulMats(Utils.getRotationMatrix([0, 1, 0], counter * 0.01), Utils.getRotationMatrix([0, 0, 1], counter * 0.02))
+        const rotToApply = Utils.mulMats(Utils.getRotationMatrix([0, 1, 0], counter * 0.005), Utils.getRotationMatrix([0, 0, 1], counter * 0.01))
         const rotationMat = Utils.mulMats(cube.rMat, rotToApply);
         const cubeMat = Utils.mulMats(cube.tMat, rotationMat);
 
@@ -370,8 +429,16 @@ namespace Program {
         gl.enableVertexAttribArray(1);
 
         for (let i = 0; i < cube.cubies.length; i++) {
-            const cubie = cube.cubies[cube.cubieMap[i]];
-            const cubieMat = Utils.mulMats(cubie.rMat, cubie.tMat);
+            const index = cube.cubieMap[i];
+            const cubie = cube.cubies[index];
+            let animationMatrix = Utils.Mat4Identity;
+            if (cube.animation.isActive) {
+                const anim = cube.animation;
+                if (Rubik.cubieIsInLayer(index, anim.layer, cube.data.size)) {
+                    animationMatrix = anim.rotMatrix;
+                }
+            }
+            const cubieMat = Utils.mulMats(animationMatrix, Utils.mulMats(cubie.rMat, cubie.tMat));
             gl.uniformMatrix4fv(modelMat, false, Utils.matToFloatArray(Utils.mulMats(cubeMat, cubieMat)));
             const numIndices = 36;
             gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_SHORT, i * numIndices * 2);
