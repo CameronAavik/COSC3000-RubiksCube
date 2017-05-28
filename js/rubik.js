@@ -362,12 +362,12 @@ var Program;
         const rotToApply = Utils.mulMats(Utils.getRotationMatrix([0, 1, 0], counter * 0.005), Utils.getRotationMatrix([0, 0, 1], counter * 0.01));
         const rotationMat = Utils.mulMats(cube.rMat, rotToApply);
         const cubeMat = Utils.mulMats(cube.tMat, rotationMat);
-        // Position Attribute
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        // Position Attribute
         gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
         gl.enableVertexAttribArray(0);
         // Colour Attribute
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
         gl.enableVertexAttribArray(1);
         for (let i = 0; i < cube.cubies.length; i++) {
