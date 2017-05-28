@@ -82,13 +82,13 @@ var Rubik;
     function rotateLayer(cube, rotationLayer) {
         const getCubie = (i, j) => getCubieIndex(cube.size, i, j, rotationLayer);
         const cubies = cube.cubies.slice(); // Create a copy of the cube
-        for (let i = 0; i < cube.size; i++) {
-            for (let j = 0; j < cube.size; j++) {
+        Utils.range(cube.size).forEach(i => {
+            Utils.range(cube.size).forEach(j => {
                 const oldCubie = cube.cubies[getCubie(cube.size - j - 1, i)];
                 const newFaceMap = getFacesAfterRotation(oldCubie.faces, rotationLayer.axis);
                 cubies[getCubie(i, j)] = { startPos: oldCubie.startPos, faces: newFaceMap, index: oldCubie.index };
-            }
-        }
+            });
+        });
         return { cubies, size: cube.size };
     }
     /**
@@ -146,19 +146,19 @@ var Rubik;
         const rots = [Utils.getRotationMatrix([1, 0, 0], Math.PI / 2), Utils.getRotationMatrix([0, 1, 0], Math.PI / 2)];
         const startPerms = [[], [1], [1, 1], [1, 1, 1], [0, 1], [0, 0, 0, 1]];
         const rotMap = new Map();
-        for (let startPerm of startPerms) {
+        startPerms.forEach(startPerm => {
             let mat = Utils.Mat4Identity;
             let faceMap = [0, 1, 2, 3, 4, 5];
-            for (let turn of startPerm) {
+            startPerm.forEach(turn => {
                 mat = Utils.mulMats(rots[turn], mat);
                 faceMap = getFacesAfterRotation(faceMap, turn);
-            }
-            for (let i = 0; i < 4; i++) {
+            });
+            Utils.range(4).forEach(_ => {
                 rotMap.set(JSON.stringify(faceMap), mat);
                 mat = Utils.mulMats(rots[0], mat);
                 faceMap = getFacesAfterRotation(faceMap, 0);
-            }
-        }
+            });
+        });
         return rotMap;
     }
     Rubik.colours = {
@@ -212,9 +212,9 @@ var Rubik;
         const reverseRotations = move === "R" || move === "U" || move === "B";
         const rotationCount = reverseRotations ? (4 - (rotations % 4)) % 4 : rotations % 4;
         let newCube = cube.data;
-        for (let i = 0; i < rotationCount; i++) {
+        Utils.range(rotationCount).forEach(_ => {
             newCube = rotateLayer(newCube, { axis, layerNum });
-        }
+        });
         const newAnimation = {
             isActive: true,
             rotMatrix: Utils.Mat4Identity,
@@ -315,11 +315,11 @@ var Program;
         gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.CULL_FACE);
         // Initialise the data to be put in the buffers
-        for (let cubie of cube.cubies) {
+        cube.cubies.forEach(cubie => {
             const [verts, indices] = getCubieVertData(cubie);
             indexData = indexData.concat(indices.map(i => i + vertData.length / 6));
             vertData = vertData.concat(verts);
-        }
+        });
         // Initialise the vertex buffer, which contains position and colour data
         vertBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
@@ -361,8 +361,7 @@ var Program;
         // Colour Attribute
         gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
         gl.enableVertexAttribArray(1);
-        for (let i = 0; i < cube.cubies.length; i++) {
-            const cubie = cube.cubies[i];
+        cube.cubies.forEach(cubie => {
             const offset = cubie.data.index;
             let animationMatrix = Utils.Mat4Identity;
             if (cube.animation.isActive) {
@@ -375,7 +374,7 @@ var Program;
             gl.uniformMatrix4fv(modelMat, false, Utils.matToFloatArray(Utils.mulMats(cubeMat, cubieMat)));
             const numIndices = 36;
             gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_SHORT, offset * numIndices * 2);
-        }
+        });
         if (counter % 200 === 0) {
             const index = Math.floor(Math.random() * 6);
             const move = "LRDUBF"[index];
