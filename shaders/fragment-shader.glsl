@@ -8,7 +8,7 @@ varying lowp vec3 worldSpaceNormal;
 void main() {
     // White light with intensity of 50
     vec3 lightColour = vec3(1, 1, 1);
-    float lightPower = 10.0;
+    float lightPower = 5.0;
     // Light is located above the camera
     vec3 worldSpaceLightPos = vec3(0, 2, 0);
     // Create normalized versions of the normal, light direction, and eye direction vectors
@@ -16,7 +16,7 @@ void main() {
     vec3 l = normalize(worldSpaceLightDirection);
     vec3 e = normalize(eyeDirection);
     // Define the ambient and specular colour (diffuse is passed in)
-    vec3 ambientColour = vec3(0.3, 0.3, 0.3) * diffuseColour;
+    vec3 ambientColour = vec3(0.5, 0.5, 0.5) * diffuseColour;
     vec3 specularColor = vec3(0.1, 0.1, 0.1);
     // Calculate the distance from the light
     float distanceToLight = length(worldSpaceLightPos - worldSpaceVertexPos);

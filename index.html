@@ -3,6 +3,14 @@
 <head>
     <title>WebVR Rubik's Cube!</title>
     <style>
+      #instructions {
+        position: absolute;
+        bottom: 20;
+        left: 20;
+        z-index: 1;
+        color: white;
+      }
+
       #glCanvas {
         position: absolute;
         width: 100%;
@@ -16,6 +24,22 @@
 
 <body>
     <canvas id="glCanvas"></canvas>
+    <div id="instructions">
+      To use the Rubik's Cube:</br>
+      </br>
+      "x" rotates about the x axis (x axis points right)</br>
+      "y" rotates about the y axis (y axis points up)</br>
+      "z" rotates about the z axis (z axis points to you)</br>
+      </br>
+      "f" rotates the white centered face</br>
+      "b" rotates the yellow cenetered face</br>
+      "l" rotates the blue cenetered face</br>
+      "r" rotates the green cenetered face</br>
+      "u" rotates the red cenetered face</br>
+      "d" rotates the orange cenetered face</br>
+      </br>
+      To perform the anti-clockwise version of these, hold shift while pressing the button
+      </div>
     <script src="js/rubik.js"></script>
 </body>
 

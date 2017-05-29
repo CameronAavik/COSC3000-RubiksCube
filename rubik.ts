@@ -229,11 +229,12 @@ namespace Rubik {
     export function createGLCube(size: number): Cube {
         const data = createCubeData(size);
         const cubies = data.cubies.map(c => getWebGLCubieFromCubie(c, size));
+        const startingRot = Utils.mulMats(Utils.getRotationMatrix([1, 0, 0], Math.PI/8), Utils.getRotationMatrix([0, 1, 0], -Math.PI/4))
         return {
             data,
             cubies,
             tMat: Utils.getTranslationMatrix([0, 0, -2]),
-            rMat: Utils.Mat4Identity,
+            rMat: startingRot,
             animation: {
                 isActive: false,
                 rotMatrix: Utils.Mat4Identity,
@@ -250,11 +251,13 @@ namespace Rubik {
             console.log("Can't apply move while the animation is still active");
             return cube;
         }
+        const boundRotations = rotations % 4; // Will only be between -3 and 3
+        const positiveRotations = boundRotations < 0 ? 4 - Math.abs(boundRotations) : boundRotations;
         const axis: Axis = (move === "L" || move === "R") ? 0 : (move === "D" || move === "U") ? 1 : 2;
         const isOpposite = move === "R" || move === "U" || move === "F";
         const layerNum = isOpposite ? cube.data.size - 1 : 0;
         const reverseRotations = move === "R" || move === "U" || move === "B";
-        const rotationCount = reverseRotations ? (4 - (rotations % 4)) % 4 : rotations % 4;
+        const rotationCount = reverseRotations ? (4 - (positiveRotations % 4)) % 4 : positiveRotations % 4;
         let newCube = cube.data;
         Utils.range(rotationCount).forEach(_ => {
             newCube = rotateLayer(newCube, { axis, layerNum });
@@ -324,8 +327,6 @@ namespace Program {
         readonly fragmentShaderPath: string
     }
 
-    let counter = 0;
-
     let cube: Rubik.Cube;
     let gl: WebGLRenderingContext;
     let glProg: WebGLProgram;
@@ -379,6 +380,8 @@ namespace Program {
         indexBuffer = gl.createBuffer() as WebGLBuffer;
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+        // Initialise the keypress handler
+        window.addEventListener("keypress", onKeyPress, false);
         // Set the animation loop callback
         window.requestAnimationFrame(onAnimationLoop);
     }
@@ -388,6 +391,26 @@ namespace Program {
         canvas.height = canvas.offsetHeight * window.devicePixelRatio;
         gl.viewport(0, 0, canvas.width, canvas.height);
         pMat = Utils.getPerspectiveMatrix(Math.PI / 2, canvas.width / canvas.height, 0.1, 1024);
+    }
+
+    function onKeyPress(ev: KeyboardEvent): void {
+        const key = ev.key.toUpperCase();
+        const isShift = ev.shiftKey;
+        if (key === "X" || key === "Y" || key === "Z") {
+            let axis: Utils.Vec3<number>;
+            const dir = isShift ? -1 : 1;
+            switch (key) {
+                case "X": axis = [dir, 0, 0]; break;
+                case "Y": axis = [0, dir, 0]; break;
+                case "Z": axis = [0, 0, dir]; break;
+                default: return;
+            }
+            const cubeRotMat = Utils.mulMats(Utils.getRotationMatrix(axis, 0.1), cube.rMat);
+            cube = { data: cube.data, cubies: cube.cubies, tMat: cube.tMat, rMat: cubeRotMat, animation: cube.animation }
+        } else if (key === 'F' || key === "B" || key === "L" || key === "R" || key === "U" || key === "D") {
+            const rotations = isShift ? -1 : 1;
+            cube = Rubik.applyMove(cube, key, rotations);
+        }
     }
 
      function onAnimationLoop(time: number) {
@@ -403,10 +426,7 @@ namespace Program {
         gl.uniformMatrix4fv(projectionMat, false, Utils.matToFloatArray(pMat));
 
         const modelMat = gl.getUniformLocation(glProg, "modelMat") as WebGLUniformLocation;
-        counter += 1;
-        const rotToApply = Utils.mulMats(Utils.getRotationMatrix([0, 1, 0], counter * 0.005), Utils.getRotationMatrix([0, 0, 1], counter * 0.01))
-        const rotationMat = Utils.mulMats(cube.rMat, rotToApply);
-        const cubeMat = Utils.mulMats(cube.tMat, rotationMat);
+        const cubeMat = Utils.mulMats(cube.tMat, cube.rMat);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -435,12 +455,6 @@ namespace Program {
             const numIndices = 36;
             gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_SHORT, offset * numIndices * 2);
         });
-        if (counter % 200 === 0) {
-            const index = Math.floor(Math.random()*6);
-            const move = "LRDUBF"[index] as Rubik.Move;
-            console.log(move);
-            cube = Rubik.applyMove(cube, move, 1)
-        }
     }
 
     function getCubieVertData(cubie: Rubik.Cubie): [number[], number[]] {
