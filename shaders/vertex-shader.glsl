@@ -13,7 +13,7 @@ varying lowp vec3 worldSpaceNormal;
 
 void main() {
     // Light is located above the camera
-    vec3 worldSpaceLightPos = vec3(0, 1, 0);
+    vec3 worldSpaceLightPos = vec3(0, 2, 0);
     vec4 worldSpaceVertexCoord = modelMat * vec4(aVertexPosition, 1.0);
 
     // Set the position
@@ -23,6 +23,6 @@ void main() {
     worldSpaceVertexPos = worldSpaceVertexCoord.xyz;
     eyeDirection = vec3(0, 0, 0) - worldSpaceVertexPos;
     worldSpaceLightDirection = worldSpaceLightPos + eyeDirection;
-    worldSpaceNormal = (modelMat * vec4(aVertexNormal, 1.0)).xyz;
+    worldSpaceNormal = (modelMat * vec4(aVertexNormal, 0.0)).xyz;
     diffuseColour = aVertexColour;
 }
