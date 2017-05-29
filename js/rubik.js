@@ -317,7 +317,7 @@ var Program;
         // Initialise the data to be put in the buffers
         cube.cubies.forEach(cubie => {
             const [verts, indices] = getCubieVertData(cubie);
-            indexData = indexData.concat(indices.map(i => i + vertData.length / 6));
+            indexData = indexData.concat(indices.map(i => i + vertData.length / 9));
             vertData = vertData.concat(verts);
         });
         // Initialise the vertex buffer, which contains position and colour data
@@ -356,11 +356,14 @@ var Program;
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         // Position Attribute
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 36, 0);
         gl.enableVertexAttribArray(0);
         // Colour Attribute
-        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 36, 12);
         gl.enableVertexAttribArray(1);
+        // Normal Attribute
+        gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 36, 24);
+        gl.enableVertexAttribArray(2);
         cube.cubies.forEach(cubie => {
             const offset = cubie.data.index;
             let animationMatrix = Utils.Mat4Identity;
@@ -387,35 +390,35 @@ var Program;
         const n = 1 / (2 * cube.data.size);
         const verts = [
             // LEFT
-            -n, -n, -n, ...colours[0],
-            -n, n, -n, ...colours[0],
-            -n, n, n, ...colours[0],
-            -n, -n, n, ...colours[0],
+            -n, -n, -n, ...colours[0], -1, 0, 0,
+            -n, n, -n, ...colours[0], -1, 0, 0,
+            -n, n, n, ...colours[0], -1, 0, 0,
+            -n, -n, n, ...colours[0], -1, 0, 0,
             // RIGHT
-            n, -n, -n, ...colours[1],
-            n, n, -n, ...colours[1],
-            n, n, n, ...colours[1],
-            n, -n, n, ...colours[1],
+            n, -n, -n, ...colours[1], 1, 0, 0,
+            n, n, -n, ...colours[1], 1, 0, 0,
+            n, n, n, ...colours[1], 1, 0, 0,
+            n, -n, n, ...colours[1], 1, 0, 0,
             // DOWN
-            -n, -n, -n, ...colours[2],
-            n, -n, -n, ...colours[2],
-            n, -n, n, ...colours[2],
-            -n, -n, n, ...colours[2],
+            -n, -n, -n, ...colours[2], 0, -1, 0,
+            n, -n, -n, ...colours[2], 0, -1, 0,
+            n, -n, n, ...colours[2], 0, -1, 0,
+            -n, -n, n, ...colours[2], 0, -1, 0,
             // UP
-            -n, n, -n, ...colours[3],
-            n, n, -n, ...colours[3],
-            n, n, n, ...colours[3],
-            -n, n, n, ...colours[3],
+            -n, n, -n, ...colours[3], 0, 1, 0,
+            n, n, -n, ...colours[3], 0, 1, 0,
+            n, n, n, ...colours[3], 0, 1, 0,
+            -n, n, n, ...colours[3], 0, 1, 0,
             // BACK
-            -n, -n, -n, ...colours[4],
-            n, -n, -n, ...colours[4],
-            n, n, -n, ...colours[4],
-            -n, n, -n, ...colours[4],
+            -n, -n, -n, ...colours[4], 0, 0, -1,
+            n, -n, -n, ...colours[4], 0, 0, -1,
+            n, n, -n, ...colours[4], 0, 0, -1,
+            -n, n, -n, ...colours[4], 0, 0, -1,
             // FRONT
-            -n, -n, n, ...colours[5],
-            n, -n, n, ...colours[5],
-            n, n, n, ...colours[5],
-            -n, n, n, ...colours[5]
+            -n, -n, n, ...colours[5], 0, 0, 1,
+            n, -n, n, ...colours[5], 0, 0, 1,
+            n, n, n, ...colours[5], 0, 0, 1,
+            -n, n, n, ...colours[5], 0, 0, 1,
         ];
         const indexes = [
             ...[0, 2, 1, 0, 3, 2].map(i => i + 0),
