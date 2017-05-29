@@ -228,7 +228,7 @@ var Rubik;
         return { data: newCube, cubies: cube.cubies, tMat: cube.tMat, rMat: cube.rMat, animation: newAnimation };
     }
     Rubik.applyMove = applyMove;
-    const timeToTurnRadian = 2 / Math.PI * 1000; // it takes 1 second to turn 90 degrees
+    const timeToTurnRadian = 1 / (2 * Math.PI) * 1000; // it takes 1/4 second to turn 90 degrees
     function progressAnimation(cube, currentTime) {
         const anim = cube.animation;
         if (anim.isActive) {
