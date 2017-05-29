@@ -364,12 +364,12 @@ var Program;
         // Normal Attribute
         gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 36, 24);
         gl.enableVertexAttribArray(2);
-        cube.cubies.forEach(cubie => {
+        cube.cubies.forEach((cubie, i) => {
             const offset = cubie.data.index;
             let animationMatrix = Utils.Mat4Identity;
             if (cube.animation.isActive) {
                 const anim = cube.animation;
-                if (Rubik.cubieIsInLayer(offset, anim.layer, cube.data.size)) {
+                if (Rubik.cubieIsInLayer(i, anim.layer, cube.data.size)) {
                     animationMatrix = anim.rotMatrix;
                 }
             }
