@@ -204,7 +204,6 @@ var Rubik;
     Rubik.createGLCube = createGLCube;
     function applyMove(cube, move, rotations) {
         if (cube.animation.isActive) {
-            console.log("Can't apply move while the animation is still active");
             return cube;
         }
         const boundRotations = rotations % 4; // Will only be between -3 and 3
@@ -264,6 +263,11 @@ var Rubik;
         return Math.floor(posInAxis) == layer.layerNum;
     }
     Rubik.cubieIsInLayer = cubieIsInLayer;
+    function rotateCube(cube, axis, angle) {
+        const cubeRotMat = Utils.mulMats(Utils.getRotationMatrix(axis, angle), cube.rMat);
+        return { data: cube.data, cubies: cube.cubies, tMat: cube.tMat, rMat: cubeRotMat, animation: cube.animation };
+    }
+    Rubik.rotateCube = rotateCube;
     function getWebGLCubieFromCubie(cubieData, size) {
         return {
             data: cubieData,
@@ -360,8 +364,7 @@ var Program;
                     break;
                 default: return;
             }
-            const cubeRotMat = Utils.mulMats(Utils.getRotationMatrix(axis, 0.1), cube.rMat);
-            cube = { data: cube.data, cubies: cube.cubies, tMat: cube.tMat, rMat: cubeRotMat, animation: cube.animation };
+            cube = Rubik.rotateCube(cube, axis, 0.1);
         }
         else if (key === 'F' || key === "B" || key === "L" || key === "R" || key === "U" || key === "D") {
             const rotations = isShift ? -1 : 1;
@@ -370,6 +373,20 @@ var Program;
     }
     function onAnimationLoop(time) {
         window.requestAnimationFrame(onAnimationLoop);
+        if (document.getElementById("autoRotate").checked) {
+            const t = window.performance.now();
+            cube = Rubik.rotateCube(cube, [1, 0, 0], 0.02 * Math.sin(t / 2000));
+            cube = Rubik.rotateCube(cube, [0, 1, 0], 0.02 * Math.cos(t / 1500));
+            cube = Rubik.rotateCube(cube, [0, 0, 1], 0.01 * Math.sin((250 + t) / 2000));
+        }
+        if (document.getElementById("autoTurn").checked) {
+            const t = window.performance.now();
+            if (t % 1000 <= 100) {
+                const index = Math.floor(Math.random() * 6);
+                const move = "LRDUBF"[index];
+                cube = Rubik.applyMove(cube, move, 1);
+            }
+        }
         cube = Rubik.progressAnimation(cube, time);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         render();
