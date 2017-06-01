@@ -6,23 +6,26 @@ attribute vec3 aVertexColour;
 attribute vec3 aVertexNormal;
 
 varying lowp vec3 diffuseColour;
-varying lowp vec3 worldSpaceVertexPos;
-varying lowp vec3 eyeDirection;
-varying lowp vec3 worldSpaceLightDirection;
-varying lowp vec3 worldSpaceNormal;
+varying lowp vec3 cameraDirection;
+varying lowp vec3 lightDirection;
+varying lowp vec3 normal;
+
+// Light is located above the camera
+vec3 worldLightPos = vec3(0.0, 0.75, 0.0);
+// Camera is located at origin
+vec3 cameraPos = vec3(0, 0, 0);
 
 void main() {
-    // Light is located above the camera
-    vec3 worldSpaceLightPos = vec3(0, 2, 0);
-    vec4 worldSpaceVertexCoord = modelMat * vec4(aVertexPosition, 1.0);
-
-    // Set the position
-    gl_Position = projectionMat * worldSpaceVertexCoord;
-
-    // And the varying values to be interpolated in the fragment shader
-    worldSpaceVertexPos = worldSpaceVertexCoord.xyz;
-    eyeDirection = vec3(0, 0, 0) - worldSpaceVertexPos;
-    worldSpaceLightDirection = worldSpaceLightPos + eyeDirection;
-    worldSpaceNormal = (modelMat * vec4(aVertexNormal, 0.0)).xyz;
+    // The world-space position
+    vec4 worldPosition = modelMat * vec4(aVertexPosition, 1.0);
+    // The screen-space position
+    gl_Position = projectionMat * worldPosition;
+    // The diffuse colour
     diffuseColour = aVertexColour;
+    // The direction from the world-space position to the camera
+    cameraDirection = normalize(cameraPos - worldPosition.xyz);
+    // The direction from the world-space position to the light
+    lightDirection = normalize(worldLightPos - worldPosition.xyz);
+    // The world-space normal
+    normal = normalize((modelMat * vec4(aVertexNormal, 0.0)).xyz);
 }
