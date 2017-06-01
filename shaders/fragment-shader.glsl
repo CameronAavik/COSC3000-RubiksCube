@@ -10,7 +10,7 @@ float shininess = 1.0;
 #define PI 3.14159265359
 
 void main() {
-    // Create normalized versions of the normal, light direction, and cameron direction vectors
+    // Create normalized versions of the normal, light direction, and camera direction vectors
     vec3 n = normalize(normal);
     vec3 w_i = normalize(lightDirection);
     vec3 w_r = normalize(cameraDirection);
